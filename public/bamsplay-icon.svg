@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bamsplayPurpleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8B5CF6" />
+      <stop offset="50%" stop-color="#7C3AED" />
+      <stop offset="100%" stop-color="#6D28D9" />
+    </linearGradient>
+    <linearGradient id="bamsplayGleam" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.22" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+
+  <!-- 1. Outer Box: White rounded container (Border radius for APK app icon) -->
+  <rect x="0" y="0" width="100" height="100" rx="20" fill="#FFFFFF" />
+
+  <!-- 2. Inner Circle: Vibrant Purple Circle centered inside -->
+  <circle cx="50" cy="50" r="38" fill="url(#bamsplayPurpleGrad)" />
+  <circle cx="50" cy="50" r="38" fill="url(#bamsplayGleam)" />
+
+  <!-- 3. The Geometric Play-B Glyph: Tall vertical stem + Play ▶ triangle -->
+  <g transform="translate(50, 50) scale(0.78) translate(-50, -50)">
+    <path
+      d="M 37 18 L 37 72 C 37 78.5 42.5 81 48 77 L 70 60 C 73 57.5 73 54.5 70 52 L 48 35 C 42.5 31 37 33.5 37 42"
+      stroke="#FFFFFF"
+      stroke-width="11"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      fill="none"
+    />
+  </g>
+</svg>

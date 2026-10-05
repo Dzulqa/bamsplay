@@ -1,0 +1,25 @@
+{
+  "name": "Bamsplay - Web Player",
+  "short_name": "Bamsplay",
+  "description": "Bamsplay is a modern, Spotify-inspired web music player with an elegant purple theme.",
+  "start_url": "/",
+  "id": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0b0813",
+  "theme_color": "#7c3aed",
+  "icons": [
+    {
+      "src": "/bamsplay-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/bamsplay-icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
