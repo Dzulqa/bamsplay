@@ -254,12 +254,12 @@ export default function DownloadedView() {
       ) : (
         <div className="space-y-1">
           {/* Table Header (Desktop) */}
-          <div className="hidden sm:grid sm:grid-cols-12 gap-4 px-4 py-2 text-[11px] font-bold text-[#8b81a8] uppercase tracking-wider border-b border-white/5 select-none">
+          <div className="hidden sm:grid sm:grid-cols-12 gap-3 sm:gap-4 px-3 sm:px-4 py-2 text-[11px] font-bold text-[#8b81a8] uppercase tracking-wider border-b border-white/5 select-none">
             <div className="col-span-1 text-center">#</div>
-            <div className="col-span-5 md:col-span-4">Judul Lagu</div>
-            <div className="col-span-3 hidden md:block">Album</div>
-            <div className="col-span-2 hidden lg:block">Ukuran / Waktu</div>
-            <div className="col-span-6 sm:col-span-6 md:col-span-4 lg:col-span-2 text-right">Aksi</div>
+            <div className="col-span-6 sm:col-span-6 md:col-span-5 2xl:col-span-4">Judul Lagu</div>
+            <div className="col-span-3 hidden md:block truncate">Album</div>
+            <div className="col-span-2 hidden 2xl:block truncate">Ukuran / Waktu</div>
+            <div className="col-span-5 sm:col-span-5 md:col-span-3 2xl:col-span-2 text-right pr-1">Aksi</div>
           </div>
 
           {/* Song Rows */}
@@ -300,7 +300,7 @@ export default function DownloadedView() {
                 </div>
 
                 {/* Title & Cover */}
-                <div className="col-span-6 sm:col-span-5 md:col-span-4 flex items-center gap-3 min-w-0 flex-1">
+                <div className="col-span-6 sm:col-span-6 md:col-span-5 2xl:col-span-4 flex items-center gap-3 min-w-0 flex-1">
                   <div className="relative w-10 h-10 rounded-md overflow-hidden shrink-0 shadow-sm">
                     <img
                       src={song.cover || "/default-cover.svg"}
@@ -345,22 +345,22 @@ export default function DownloadedView() {
                 </div>
 
                 {/* Album */}
-                <div className="col-span-3 hidden md:block text-xs text-[#958dae] truncate">
+                <div className="col-span-3 hidden md:block text-xs text-[#958dae] truncate min-w-0">
                   {song.album || "Single"}
                 </div>
 
                 {/* Storage size & download date */}
-                <div className="col-span-2 hidden lg:flex flex-col text-[11px]">
-                  <span className="text-emerald-300 font-mono font-medium">
+                <div className="col-span-2 hidden 2xl:flex flex-col text-[11px] truncate min-w-0 pr-2">
+                  <span className="text-emerald-300 font-mono font-medium truncate">
                     {formatSize(song.storageSize)}
                   </span>
-                  <span className="text-[#7e759a] text-[10px]">
+                  <span className="text-[#7e759a] text-[10px] truncate">
                     Diunduh {formatDate(song.downloadedAt)}
                   </span>
                 </div>
 
                 {/* Actions */}
-                <div className="col-span-6 sm:col-span-6 md:col-span-4 lg:col-span-2 flex items-center justify-end gap-2 text-xs shrink-0">
+                <div className="col-span-5 sm:col-span-5 md:col-span-3 2xl:col-span-2 flex items-center justify-end gap-1.5 sm:gap-2 text-xs shrink-0">
                   <span className="hidden sm:inline-block font-mono text-[11px] text-[#8e84ab] mr-1">
                     {song.duration || "3:30"}
                   </span>
@@ -370,7 +370,7 @@ export default function DownloadedView() {
                       e.stopPropagation();
                       openAddToPlaylistModal(song);
                     }}
-                    className="text-[#877e9f] hover:text-purple-300 p-1 opacity-70 group-hover:opacity-100 transition-opacity"
+                    className="text-[#877e9f] hover:text-purple-300 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                     title="Tambahkan ke Playlist"
                   >
                     <ListPlus className="w-4 h-4" />

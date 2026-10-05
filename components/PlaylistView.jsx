@@ -204,12 +204,12 @@ export default function PlaylistView() {
       {/* Tracks List */}
       <div className="w-full">
         {/* Table Header (Hidden on small mobile) */}
-        <div className="hidden sm:grid grid-cols-12 gap-4 px-4 py-2 border-b border-[#20163b] text-xs font-semibold text-[#8a81a4] uppercase tracking-wider">
+        <div className="hidden sm:grid grid-cols-12 gap-3 sm:gap-4 px-3 sm:px-4 py-2 border-b border-[#20163b] text-xs font-semibold text-[#8a81a4] uppercase tracking-wider">
           <div className="col-span-1 text-center">#</div>
-          <div className="col-span-6 sm:col-span-5 md:col-span-4">Judul</div>
-          <div className="col-span-3 hidden md:block">Album</div>
-          <div className="col-span-2 hidden lg:block">Ditambahkan</div>
-          <div className="col-span-5 sm:col-span-6 md:col-span-4 lg:col-span-2 flex justify-end">
+          <div className="col-span-6 sm:col-span-6 md:col-span-5 2xl:col-span-4">Judul</div>
+          <div className="col-span-3 hidden md:block truncate">Album</div>
+          <div className="col-span-2 hidden 2xl:block truncate">Ditambahkan</div>
+          <div className="col-span-5 sm:col-span-5 md:col-span-3 2xl:col-span-2 flex justify-end pr-1">
             <Clock className="w-4 h-4" />
           </div>
         </div>
@@ -254,7 +254,7 @@ export default function PlaylistView() {
                   </div>
 
                   {/* Title & Cover */}
-                  <div className="col-span-6 sm:col-span-5 md:col-span-4 flex items-center gap-3 min-w-0 flex-1">
+                  <div className="col-span-6 sm:col-span-6 md:col-span-5 2xl:col-span-4 flex items-center gap-3 min-w-0 flex-1">
                     <img
                       src={song.cover || "/default-cover.svg"}
                       alt={song.title}
@@ -293,17 +293,17 @@ export default function PlaylistView() {
                   </div>
 
                   {/* Album Name (Desktop) */}
-                  <div className="col-span-3 hidden md:block text-xs text-[#958dae] truncate">
+                  <div className="col-span-3 hidden md:block text-xs text-[#958dae] truncate min-w-0">
                     {song.album}
                   </div>
 
                   {/* Date Added (Desktop) */}
-                  <div className="col-span-2 hidden lg:block text-xs text-[#7e759a]">
-                    {song.addedDate}
+                  <div className="col-span-2 hidden 2xl:block text-xs text-[#7e759a] truncate min-w-0 pr-2">
+                    {song.addedDate || "Baru saja"}
                   </div>
 
                   {/* Actions: Add to Playlist, Like & Duration */}
-                  <div className="col-span-6 sm:col-span-6 md:col-span-4 lg:col-span-2 flex items-center justify-end gap-2 text-xs shrink-0">
+                  <div className="col-span-5 sm:col-span-5 md:col-span-3 2xl:col-span-2 flex items-center justify-end gap-1.5 sm:gap-2 text-xs shrink-0">
 
                     {/* Add to Queue Button */}
                     <button
@@ -311,7 +311,7 @@ export default function PlaylistView() {
                         e.stopPropagation();
                         addToQueue(song);
                       }}
-                      className="text-[#877e9f] hover:text-purple-300 p-1 opacity-70 group-hover:opacity-100 transition-opacity"
+                      className="text-[#877e9f] hover:text-purple-300 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                       title="Tambahkan ke Antrean"
                     >
                       <ListMusic className="w-4 h-4" />
@@ -323,7 +323,7 @@ export default function PlaylistView() {
                         e.stopPropagation();
                         openAddToPlaylistModal(song);
                       }}
-                      className="text-[#877e9f] hover:text-purple-300 p-1 opacity-70 group-hover:opacity-100 transition-opacity"
+                      className="text-[#877e9f] hover:text-purple-300 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                       title="Tambahkan ke Playlist"
                     >
                       <ListPlus className="w-4 h-4" />
@@ -336,7 +336,7 @@ export default function PlaylistView() {
                           e.stopPropagation();
                           removeSongFromPlaylist(song.id, playlist.id);
                         }}
-                        className="text-[#877e9f] hover:text-rose-400 p-1 opacity-50 group-hover:opacity-100 transition-opacity"
+                        className="text-[#877e9f] hover:text-rose-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                         title="Hapus dari Playlist Ini"
                       >
                         <Trash2 className="w-3.5 h-3.5" />

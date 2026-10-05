@@ -12,14 +12,28 @@
       "subtitle": "Koleksi yang Disukai",
       "type": "Koleksi",
       "creator": "Bams",
-      "totalSongs": 0,
+      "totalSongs": 6,
       "duration": "0 min",
       "cover": "linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #4c1d95 100%)",
       "isLikedPlaylist": true,
       "description": "Semua lagu favorit yang telah kamu tandai dengan hati di Bamsplay.",
-      "songIds": []
+      "songIds": [
+        "bernadya-1",
+        "bernadya-2",
+        "bernadya-3",
+        "taylor-3",
+        "taylor-2",
+        "tulus-2"
+      ]
     }
   ],
-  "likedSongIds": [],
-  "updatedAt": "2026-10-05T15:58:59.223Z"
+  "likedSongIds": [
+    "bernadya-1",
+    "bernadya-2",
+    "bernadya-3",
+    "taylor-3",
+    "taylor-2",
+    "tulus-2"
+  ],
+  "updatedAt": "2026-10-05T16:20:51.830Z"
 }
