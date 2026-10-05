@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useAudio } from "@/context/AudioContext";
-import { Mic2, Loader2, ArrowDown, Minimize2 } from "lucide-react";
+import { Mic2, Loader2, ArrowDown, ArrowUp, Minimize2 } from "lucide-react";
 
 export default function LyricsView() {
   const {
@@ -18,6 +18,7 @@ export default function LyricsView() {
   } = useAudio();
   const [isLoadingLyrics, setIsLoadingLyrics] = useState(false);
   const [isUserScrolledAway, setIsUserScrolledAway] = useState(false);
+  const [scrollDirection, setScrollDirection] = useState("down");
   const activeLineRef = useRef(null);
   const containerRef = useRef(null);
   const scrollTimeoutRef = useRef(null);
@@ -144,12 +145,36 @@ export default function LyricsView() {
 
   const isUnsyncedLyrics = cleanLyrics.length > 0 && cleanLyrics.some((l) => l?.isUnsynced);
 
+  // Calculate whether active lyric is above or below current viewport
+  const updateScrollDirection = useCallback(() => {
+    if (!containerRef.current) return;
+    const container = containerRef.current;
+
+    if (activeLineRef.current) {
+      const line = activeLineRef.current;
+      const containerCenter = container.scrollTop + container.clientHeight / 2;
+      const lineCenter = line.offsetTop + line.clientHeight / 2;
+      setScrollDirection(lineCenter < containerCenter ? "up" : "down");
+    } else if (activeIndex >= 0 && cleanLyrics && cleanLyrics.length > 0) {
+      const scrollRatio = container.scrollHeight > 0 ? container.scrollTop / container.scrollHeight : 0;
+      const activeRatio = activeIndex / cleanLyrics.length;
+      setScrollDirection(activeRatio < scrollRatio ? "up" : "down");
+    }
+  }, [activeIndex, cleanLyrics]);
+
   const handleUserInteraction = () => {
     setIsUserScrolledAway(true);
+    updateScrollDirection();
     clearTimeout(scrollTimeoutRef.current);
     scrollTimeoutRef.current = setTimeout(() => {
       setIsUserScrolledAway(false);
     }, 4500);
+  };
+
+  const handleScroll = () => {
+    if (isUserScrolledAway) {
+      updateScrollDirection();
+    }
   };
 
   const scrollToActive = () => {
@@ -166,6 +191,13 @@ export default function LyricsView() {
       containerEl.scrollTo({ top: targetScroll, behavior: "smooth" });
     }
   };
+
+  // Update direction when active index changes while scrolled away
+  useEffect(() => {
+    if (isUserScrolledAway) {
+      updateScrollDirection();
+    }
+  }, [activeIndex, isUserScrolledAway]);
 
   // Smooth auto-scroll: centers active line cleanly in containerRef
   useEffect(() => {
@@ -266,6 +298,7 @@ export default function LyricsView() {
             ref={containerRef}
             onWheel={handleUserInteraction}
             onTouchMove={handleUserInteraction}
+            onScroll={handleScroll}
             className="flex-1 w-full h-full relative overflow-y-auto custom-scrollbar scroll-smooth pt-3 sm:pt-5 lg:pt-6 pb-44 space-y-4 sm:space-y-6"
           >
             {cleanLyrics.length === 0 || isLoadingLyrics ? (
@@ -309,9 +342,13 @@ export default function LyricsView() {
       {isUserScrolledAway && activeIndex >= 0 && (
         <button
           onClick={scrollToActive}
-          className="fixed bottom-28 right-8 z-30 flex items-center gap-2 px-4 py-2 rounded-full bg-[#1e1338]/95 hover:bg-[#281b4a] text-white text-xs font-semibold backdrop-blur-md border border-purple-500/30 shadow-xl transition-all cursor-pointer"
+          className="fixed bottom-28 right-8 z-30 flex items-center gap-2 px-4 py-2 rounded-full bg-[#1e1338]/95 hover:bg-[#281b4a] text-white text-xs font-semibold backdrop-blur-md border border-purple-500/30 shadow-xl transition-all cursor-pointer animate-fadeIn"
         >
-          <ArrowDown className="w-3.5 h-3.5 text-purple-300" />
+          {scrollDirection === "up" ? (
+            <ArrowUp className="w-3.5 h-3.5 text-purple-300" />
+          ) : (
+            <ArrowDown className="w-3.5 h-3.5 text-purple-300" />
+          )}
           <span>Kembali ke baris aktif</span>
         </button>
       )}

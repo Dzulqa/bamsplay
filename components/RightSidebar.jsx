@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useAudio } from "@/context/AudioContext";
 import {
   Mic2,
@@ -10,6 +10,8 @@ import {
   Music2,
   ChevronDown,
   ChevronUp,
+  ArrowDown,
+  ArrowUp,
   Loader2,
   X,
 } from "lucide-react";
@@ -33,6 +35,7 @@ export default function RightSidebar() {
 
   const [isLoadingLyrics, setIsLoadingLyrics] = useState(false);
   const [isUserScrolledAway, setIsUserScrolledAway] = useState(false);
+  const [scrollDirection, setScrollDirection] = useState("down");
   const [isMeaningOpen, setIsMeaningOpen] = useState(false);
 
   const containerRef = useRef(null);
@@ -148,13 +151,37 @@ export default function RightSidebar() {
     return -1;
   }, [cleanLyrics, currentTime, currentSong?.lyricsOffset]);
 
+  // Calculate whether active lyric is above or below the current viewport
+  const updateScrollDirection = useCallback(() => {
+    if (!containerRef.current) return;
+    const container = containerRef.current;
+
+    if (activeLineRef.current) {
+      const line = activeLineRef.current;
+      const containerCenter = container.scrollTop + container.clientHeight / 2;
+      const lineCenter = line.offsetTop + line.clientHeight / 2;
+      setScrollDirection(lineCenter < containerCenter ? "up" : "down");
+    } else if (activeIndex >= 0 && cleanLyrics && cleanLyrics.length > 0) {
+      const scrollRatio = container.scrollHeight > 0 ? container.scrollTop / container.scrollHeight : 0;
+      const activeRatio = activeIndex / cleanLyrics.length;
+      setScrollDirection(activeRatio < scrollRatio ? "up" : "down");
+    }
+  }, [activeIndex, cleanLyrics]);
+
   // User manual scroll detection
   const handleUserInteraction = () => {
     setIsUserScrolledAway(true);
+    updateScrollDirection();
     clearTimeout(scrollTimeoutRef.current);
     scrollTimeoutRef.current = setTimeout(() => {
       setIsUserScrolledAway(false);
     }, 4500);
+  };
+
+  const handleScroll = () => {
+    if (isUserScrolledAway) {
+      updateScrollDirection();
+    }
   };
 
   const scrollToActive = () => {
@@ -171,6 +198,13 @@ export default function RightSidebar() {
       containerEl.scrollTo({ top: targetScroll, behavior: "smooth" });
     }
   };
+
+  // Update direction when active line changes while scrolled away
+  useEffect(() => {
+    if (isUserScrolledAway) {
+      updateScrollDirection();
+    }
+  }, [activeIndex, isUserScrolledAway]);
 
   // Smooth auto-scroll to keep active line centered
   useEffect(() => {
@@ -317,6 +351,7 @@ export default function RightSidebar() {
         ref={containerRef}
         onWheel={handleUserInteraction}
         onTouchMove={handleUserInteraction}
+        onScroll={handleScroll}
         className="flex-1 overflow-y-auto px-4 py-4 space-y-4 custom-scrollbar relative"
       >
         {isLoadingLyrics ? (
@@ -383,8 +418,13 @@ export default function RightSidebar() {
         <div className="p-3 absolute bottom-3 left-0 right-0 flex justify-center z-10 pointer-events-none">
           <button
             onClick={scrollToActive}
-            className="pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-xl border border-purple-400/40 transition-transform active:scale-95 cursor-pointer"
+            className="pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-xl border border-purple-400/40 transition-transform active:scale-95 cursor-pointer animate-fadeIn"
           >
+            {scrollDirection === "up" ? (
+              <ArrowUp className="w-3.5 h-3.5" />
+            ) : (
+              <ArrowDown className="w-3.5 h-3.5" />
+            )}
             <span>Ikuti Lagu</span>
           </button>
         </div>
