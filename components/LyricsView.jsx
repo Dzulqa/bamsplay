@@ -185,25 +185,20 @@ export default function LyricsView() {
 
 
   return (
-    <div
-      ref={containerRef}
-      onWheel={handleUserInteraction}
-      onTouchMove={handleUserInteraction}
-      className="relative h-full pb-36 pt-6 sm:pt-8 px-6 sm:px-12 select-none overflow-y-auto custom-scrollbar scroll-smooth bg-gradient-to-b from-[#180e2b] via-[#10081e] to-[#090512]"
-    >
+    <div className="relative h-full w-full select-none overflow-hidden bg-gradient-to-b from-[#180e2b] via-[#10081e] to-[#090512]">
       {/* Dynamic Ambient Glowing Aura (Eliminates dead void) */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-purple-600/15 rounded-full blur-[140px] animate-pulse" />
         <div className="absolute bottom-1/3 right-1/4 w-[450px] h-[450px] bg-fuchsia-600/10 rounded-full blur-[140px]" />
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto">
-        {/* Two-Column Responsive Layout: Left Sticky Track Showcase + Right Synchronized Lyrics Stream */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-start">
+      <div className="relative z-10 h-full max-w-7xl mx-auto px-6 sm:px-12">
+        {/* Two-Column Responsive Layout: Left Fixed Track Showcase + Right Synchronized Scrolling Lyrics Stream */}
+        <div className="flex flex-col lg:flex-row h-full gap-8 lg:gap-14 items-start">
           
-          {/* Left Column: Sticky Song Showcase & Music Visualizer */}
-          <div className="lg:col-span-5 lg:sticky lg:top-4 flex flex-col items-center lg:items-start text-center lg:text-left space-y-3.5 sm:space-y-4 py-2 lg:py-3">
-            <div className="relative group w-48 h-48 sm:w-56 sm:h-56 lg:w-64 lg:h-64 rounded-xl overflow-hidden shadow-2xl border border-white/10 shrink-0 bg-[#120a22]">
+          {/* Left Column: Fixed Song Showcase & Music Visualizer (Does not scroll) */}
+          <div className="w-full lg:w-5/12 shrink-0 flex flex-col items-center lg:items-start text-center lg:text-left space-y-3 sm:space-y-3.5 pt-3 sm:pt-5 lg:pt-6 pb-4 select-none">
+            <div className="relative group w-44 h-44 sm:w-52 sm:h-52 lg:w-56 lg:h-56 xl:w-60 xl:h-60 rounded-2xl overflow-hidden shadow-2xl border border-white/10 shrink-0 bg-[#120a22]">
               <img
                 src={currentSong?.cover || "/default-cover.svg"}
                 alt={currentSong?.title}
@@ -243,8 +238,13 @@ export default function LyricsView() {
 
           </div>
 
-          {/* Right Column: Synchronized Singing Lyrics Stream */}
-          <div className="lg:col-span-7 space-y-4 sm:space-y-6 py-4">
+          {/* Right Column: Independently Scrollable Synchronized Lyrics Stream */}
+          <div
+            ref={containerRef}
+            onWheel={handleUserInteraction}
+            onTouchMove={handleUserInteraction}
+            className="flex-1 w-full h-full relative overflow-y-auto custom-scrollbar scroll-smooth pt-3 sm:pt-5 lg:pt-6 pb-44 space-y-4 sm:space-y-6"
+          >
             {cleanLyrics.length === 0 || isLoadingLyrics ? (
               <div className="py-28 text-center space-y-3">
                 <Loader2 className="w-8 h-8 animate-spin text-purple-400 mx-auto" />
