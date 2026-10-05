@@ -202,8 +202,8 @@ export default function LyricsView() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-start">
           
           {/* Left Column: Sticky Song Showcase & Music Visualizer */}
-          <div className="lg:col-span-5 lg:sticky lg:top-4 flex flex-col items-center lg:items-start text-center lg:text-left space-y-5 py-4">
-            <div className="relative group w-52 h-52 sm:w-60 sm:h-60 lg:w-72 lg:h-72 rounded-xl overflow-hidden shadow-2xl border border-white/10 shrink-0 bg-[#120a22]">
+          <div className="lg:col-span-5 lg:sticky lg:top-4 flex flex-col items-center lg:items-start text-center lg:text-left space-y-3.5 sm:space-y-4 py-2 lg:py-3">
+            <div className="relative group w-48 h-48 sm:w-56 sm:h-56 lg:w-64 lg:h-64 rounded-xl overflow-hidden shadow-2xl border border-white/10 shrink-0 bg-[#120a22]">
               <img
                 src={currentSong?.cover || "/default-cover.svg"}
                 alt={currentSong?.title}
@@ -215,32 +215,31 @@ export default function LyricsView() {
               />
             </div>
 
-            <div className="space-y-1.5 w-full">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 text-[11px] font-bold tracking-wider">
+            <div className="space-y-1.5 w-full max-w-sm">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 text-[11px] font-bold tracking-wider">
                 <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
                 <span>Lirik</span>
               </div>
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight leading-tight">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight leading-tight line-clamp-2">
                 {currentSong?.title}
               </h1>
-              <p className="text-sm sm:text-base text-purple-200/80 font-medium">
+              <p className="text-xs sm:text-sm text-purple-200/80 font-medium line-clamp-2">
                 {currentSong?.artist} {currentSong?.album ? `• ${currentSong.album}` : ""}
               </p>
             </div>
 
             {/* Live Equalizer Visualizer Bars */}
-            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.04] border border-white/5">
-              <div className="flex items-end gap-1 h-4">
-                <span className={`w-1 bg-purple-400 rounded-full ${isPlaying ? "animate-eq-1 h-3" : "h-1"}`} />
-                <span className={`w-1 bg-purple-400 rounded-full ${isPlaying ? "animate-eq-2 h-4" : "h-1.5"}`} />
-                <span className={`w-1 bg-purple-400 rounded-full ${isPlaying ? "animate-eq-3 h-2" : "h-1"}`} />
-                <span className={`w-1 bg-purple-400 rounded-full ${isPlaying ? "animate-eq-4 h-3.5" : "h-2"}`} />
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.05] border border-white/10 shrink-0 shadow-md">
+              <div className="flex items-end gap-1 h-3.5">
+                <span className={`w-0.5 sm:w-1 bg-purple-400 rounded-full ${isPlaying ? "animate-eq-1 h-3" : "h-1"}`} />
+                <span className={`w-0.5 sm:w-1 bg-purple-400 rounded-full ${isPlaying ? "animate-eq-2 h-3.5" : "h-1.5"}`} />
+                <span className={`w-0.5 sm:w-1 bg-purple-400 rounded-full ${isPlaying ? "animate-eq-3 h-2" : "h-1"}`} />
+                <span className={`w-0.5 sm:w-1 bg-purple-400 rounded-full ${isPlaying ? "animate-eq-4 h-3" : "h-1.5"}`} />
               </div>
-              <span className="text-xs font-semibold text-purple-300/90 ml-1">
+              <span className="text-xs font-semibold text-purple-200/90 ml-1">
                 {isPlaying ? "Sedang Mengalun" : "Musik Dijeda"}
               </span>
             </div>
-
 
           </div>
 
