@@ -151,6 +151,8 @@ export default function RightSidebar() {
     return -1;
   }, [cleanLyrics, currentTime, currentSong?.lyricsOffset]);
 
+  const isAutoScrollingRef = useRef(false);
+
   // Calculate whether active lyric is above or below the current viewport
   const updateScrollDirection = useCallback(() => {
     if (!containerRef.current) return;
@@ -158,34 +160,48 @@ export default function RightSidebar() {
 
     if (activeLineRef.current) {
       const line = activeLineRef.current;
-      const containerCenter = container.scrollTop + container.clientHeight / 2;
-      const lineCenter = line.offsetTop + line.clientHeight / 2;
+      const containerRect = container.getBoundingClientRect();
+      const lineRect = line.getBoundingClientRect();
+
+      const containerCenter = containerRect.top + containerRect.height / 2;
+      const lineCenter = lineRect.top + lineRect.height / 2;
+
       setScrollDirection(lineCenter < containerCenter ? "up" : "down");
-    } else if (activeIndex >= 0 && cleanLyrics && cleanLyrics.length > 0) {
-      const scrollRatio = container.scrollHeight > 0 ? container.scrollTop / container.scrollHeight : 0;
-      const activeRatio = activeIndex / cleanLyrics.length;
+    } else if (cleanLyrics && cleanLyrics.length > 0) {
+      const targetIdx = activeIndex >= 0 ? activeIndex : 0;
+      const maxScroll = container.scrollHeight - container.clientHeight;
+      const scrollRatio = maxScroll > 0 ? container.scrollTop / maxScroll : 0;
+      const activeRatio = targetIdx / (cleanLyrics.length - 1 || 1);
       setScrollDirection(activeRatio < scrollRatio ? "up" : "down");
     }
   }, [activeIndex, cleanLyrics]);
 
   // User manual scroll detection
   const handleUserInteraction = () => {
-    setIsUserScrolledAway(true);
-    updateScrollDirection();
-    clearTimeout(scrollTimeoutRef.current);
-    scrollTimeoutRef.current = setTimeout(() => {
-      setIsUserScrolledAway(false);
-    }, 4500);
+    if (!isAutoScrollingRef.current) {
+      setIsUserScrolledAway(true);
+      clearTimeout(scrollTimeoutRef.current);
+      scrollTimeoutRef.current = setTimeout(() => {
+        setIsUserScrolledAway(false);
+      }, 5000);
+    }
+    setTimeout(updateScrollDirection, 50);
   };
 
   const handleScroll = () => {
-    if (isUserScrolledAway) {
-      updateScrollDirection();
+    if (!isAutoScrollingRef.current) {
+      setIsUserScrolledAway(true);
+      clearTimeout(scrollTimeoutRef.current);
+      scrollTimeoutRef.current = setTimeout(() => {
+        setIsUserScrolledAway(false);
+      }, 5000);
     }
+    updateScrollDirection();
   };
 
   const scrollToActive = () => {
     setIsUserScrolledAway(false);
+    isAutoScrollingRef.current = true;
     if (activeIndex <= 0) {
       if (containerRef.current) containerRef.current.scrollTo({ top: 0, behavior: "smooth" });
     } else if (activeLineRef.current && containerRef.current) {
@@ -197,6 +213,9 @@ export default function RightSidebar() {
       );
       containerEl.scrollTo({ top: targetScroll, behavior: "smooth" });
     }
+    setTimeout(() => {
+      isAutoScrollingRef.current = false;
+    }, 600);
   };
 
   // Update direction when active line changes while scrolled away
@@ -204,7 +223,7 @@ export default function RightSidebar() {
     if (isUserScrolledAway) {
       updateScrollDirection();
     }
-  }, [activeIndex, isUserScrolledAway]);
+  }, [activeIndex, isUserScrolledAway, updateScrollDirection]);
 
   // Smooth auto-scroll to keep active line centered
   useEffect(() => {
@@ -216,7 +235,12 @@ export default function RightSidebar() {
         0,
         lineEl.offsetTop - containerEl.clientHeight / 2 + lineEl.clientHeight / 2
       );
+      isAutoScrollingRef.current = true;
       containerEl.scrollTo({ top: targetScroll, behavior: "smooth" });
+      const timer = setTimeout(() => {
+        isAutoScrollingRef.current = false;
+      }, 500);
+      return () => clearTimeout(timer);
     }
   }, [activeIndex, isUserScrolledAway]);
 

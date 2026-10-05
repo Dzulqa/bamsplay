@@ -145,6 +145,8 @@ export default function LyricsView() {
 
   const isUnsyncedLyrics = cleanLyrics.length > 0 && cleanLyrics.some((l) => l?.isUnsynced);
 
+  const isAutoScrollingRef = useRef(false);
+
   // Calculate whether active lyric is above or below current viewport
   const updateScrollDirection = useCallback(() => {
     if (!containerRef.current) return;
@@ -152,33 +154,47 @@ export default function LyricsView() {
 
     if (activeLineRef.current) {
       const line = activeLineRef.current;
-      const containerCenter = container.scrollTop + container.clientHeight / 2;
-      const lineCenter = line.offsetTop + line.clientHeight / 2;
+      const containerRect = container.getBoundingClientRect();
+      const lineRect = line.getBoundingClientRect();
+
+      const containerCenter = containerRect.top + containerRect.height / 2;
+      const lineCenter = lineRect.top + lineRect.height / 2;
+
       setScrollDirection(lineCenter < containerCenter ? "up" : "down");
-    } else if (activeIndex >= 0 && cleanLyrics && cleanLyrics.length > 0) {
-      const scrollRatio = container.scrollHeight > 0 ? container.scrollTop / container.scrollHeight : 0;
-      const activeRatio = activeIndex / cleanLyrics.length;
+    } else if (cleanLyrics && cleanLyrics.length > 0) {
+      const targetIdx = activeIndex >= 0 ? activeIndex : 0;
+      const maxScroll = container.scrollHeight - container.clientHeight;
+      const scrollRatio = maxScroll > 0 ? container.scrollTop / maxScroll : 0;
+      const activeRatio = targetIdx / (cleanLyrics.length - 1 || 1);
       setScrollDirection(activeRatio < scrollRatio ? "up" : "down");
     }
   }, [activeIndex, cleanLyrics]);
 
   const handleUserInteraction = () => {
-    setIsUserScrolledAway(true);
-    updateScrollDirection();
-    clearTimeout(scrollTimeoutRef.current);
-    scrollTimeoutRef.current = setTimeout(() => {
-      setIsUserScrolledAway(false);
-    }, 4500);
+    if (!isAutoScrollingRef.current) {
+      setIsUserScrolledAway(true);
+      clearTimeout(scrollTimeoutRef.current);
+      scrollTimeoutRef.current = setTimeout(() => {
+        setIsUserScrolledAway(false);
+      }, 5000);
+    }
+    setTimeout(updateScrollDirection, 50);
   };
 
   const handleScroll = () => {
-    if (isUserScrolledAway) {
-      updateScrollDirection();
+    if (!isAutoScrollingRef.current) {
+      setIsUserScrolledAway(true);
+      clearTimeout(scrollTimeoutRef.current);
+      scrollTimeoutRef.current = setTimeout(() => {
+        setIsUserScrolledAway(false);
+      }, 5000);
     }
+    updateScrollDirection();
   };
 
   const scrollToActive = () => {
     setIsUserScrolledAway(false);
+    isAutoScrollingRef.current = true;
     if (activeIndex <= 0) {
       scrollToTop(true);
     } else if (activeLineRef.current && containerRef.current) {
@@ -190,6 +206,9 @@ export default function LyricsView() {
       );
       containerEl.scrollTo({ top: targetScroll, behavior: "smooth" });
     }
+    setTimeout(() => {
+      isAutoScrollingRef.current = false;
+    }, 600);
   };
 
   // Update direction when active index changes while scrolled away
@@ -197,7 +216,7 @@ export default function LyricsView() {
     if (isUserScrolledAway) {
       updateScrollDirection();
     }
-  }, [activeIndex, isUserScrolledAway]);
+  }, [activeIndex, isUserScrolledAway, updateScrollDirection]);
 
   // Smooth auto-scroll: centers active line cleanly in containerRef
   useEffect(() => {
@@ -214,7 +233,12 @@ export default function LyricsView() {
         0,
         lineEl.offsetTop - containerEl.clientHeight / 2 + lineEl.clientHeight / 2
       );
+      isAutoScrollingRef.current = true;
       containerEl.scrollTo({ top: targetScroll, behavior: "smooth" });
+      const timer = setTimeout(() => {
+        isAutoScrollingRef.current = false;
+      }, 500);
+      return () => clearTimeout(timer);
     }
   }, [activeIndex, isUserScrolledAway]);
 
