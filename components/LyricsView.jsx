@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useAudio } from "@/context/AudioContext";
-import { Mic2, Loader2, ArrowDown, Play, Pause, Heart } from "lucide-react";
+import { Mic2, Loader2, ArrowDown } from "lucide-react";
 
 export default function LyricsView() {
   const {
@@ -11,9 +11,6 @@ export default function LyricsView() {
     seek,
     updateSongLyrics,
     isPlaying,
-    togglePlay,
-    toggleLike,
-    likedSongIds,
   } = useAudio();
   const [isLoadingLyrics, setIsLoadingLyrics] = useState(false);
   const [isUserScrolledAway, setIsUserScrolledAway] = useState(false);
@@ -185,7 +182,7 @@ export default function LyricsView() {
     }
   }, [activeIndex, isUserScrolledAway]);
 
-  const isLiked = currentSong ? likedSongIds.includes(currentSong.id) : false;
+
 
   return (
     <div
@@ -244,28 +241,7 @@ export default function LyricsView() {
               </span>
             </div>
 
-            {/* Quick Actions */}
-            <div className="flex items-center gap-3 pt-1">
-              <button
-                onClick={togglePlay}
-                className="px-5 py-2.5 rounded-full bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-500 hover:to-fuchsia-500 text-white font-bold text-xs shadow-lg transition-all active:scale-95 flex items-center gap-2 cursor-pointer"
-              >
-                {isPlaying ? <Pause className="w-3.5 h-3.5 fill-white" /> : <Play className="w-3.5 h-3.5 fill-white ml-0.5" />}
-                <span>{isPlaying ? "Jeda Musik" : "Putar Musik"}</span>
-              </button>
 
-              <button
-                onClick={() => currentSong && toggleLike(currentSong)}
-                className={`p-2.5 rounded-full border transition-all ${
-                  isLiked
-                    ? "bg-purple-900/40 border-purple-500 text-purple-400"
-                    : "border-white/10 text-white/70 hover:text-white hover:border-white/30"
-                }`}
-                title={isLiked ? "Hapus dari Favorit" : "Simpan ke Favorit"}
-              >
-                <Heart className={`w-4 h-4 ${isLiked ? "fill-purple-500 text-purple-500" : ""}`} />
-              </button>
-            </div>
           </div>
 
           {/* Right Column: Synchronized Singing Lyrics Stream */}
