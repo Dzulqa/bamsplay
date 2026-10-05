@@ -40,11 +40,20 @@ export default function PlaylistView() {
     showToast,
     openAddToPlaylistModal,
     removeSongFromPlaylist,
+    isSidebarCollapsed,
+    isRightSidebarOpen,
+    activeView,
   } = useAudio();
 
   const [playlistSearch, setPlaylistSearch] = useState("");
   const [isDownloaded, setIsDownloaded] = useState(false);
   const [activeMenuSongId, setActiveMenuSongId] = useState(null);
+
+  // Ditambahkan / Added Date column is only displayed when there is sufficient horizontal space:
+  // i.e., when at least one sidebar is collapsed/closed.
+  const isRightSidebarVisible = isRightSidebarOpen && !!currentSong && activeView !== "lyrics";
+  const isBothSidebarsOpen = !isSidebarCollapsed && isRightSidebarVisible;
+  const showAddedDate = !isBothSidebarsOpen;
 
   const playlistId = activeViewData?.playlistId || "liked-songs";
   const playlist =
@@ -206,10 +215,20 @@ export default function PlaylistView() {
         {/* Table Header (Hidden on small mobile) */}
         <div className="hidden sm:grid grid-cols-12 gap-3 sm:gap-4 px-3 sm:px-4 py-2 border-b border-[#20163b] text-xs font-semibold text-[#8a81a4] uppercase tracking-wider">
           <div className="col-span-1 text-center">#</div>
-          <div className="col-span-6 sm:col-span-6 md:col-span-5 2xl:col-span-4">Judul</div>
+          <div className={showAddedDate ? "col-span-5 md:col-span-4" : "col-span-6 md:col-span-5"}>
+            Judul
+          </div>
           <div className="col-span-3 hidden md:block truncate">Album</div>
-          <div className="col-span-2 hidden 2xl:block truncate">Ditambahkan</div>
-          <div className="col-span-5 sm:col-span-5 md:col-span-3 2xl:col-span-2 flex justify-end pr-1">
+          {showAddedDate && (
+            <div className="col-span-2 hidden xl:block truncate">Ditambahkan</div>
+          )}
+          <div
+            className={`${
+              showAddedDate
+                ? "col-span-6 sm:col-span-6 md:col-span-4 xl:col-span-2"
+                : "col-span-5 md:col-span-3"
+            } flex justify-end pr-2`}
+          >
             <Clock className="w-4 h-4" />
           </div>
         </div>
@@ -254,7 +273,13 @@ export default function PlaylistView() {
                   </div>
 
                   {/* Title & Cover */}
-                  <div className="col-span-6 sm:col-span-6 md:col-span-5 2xl:col-span-4 flex items-center gap-3 min-w-0 flex-1">
+                  <div
+                    className={`${
+                      showAddedDate
+                        ? "col-span-5 md:col-span-4"
+                        : "col-span-6 md:col-span-5"
+                    } flex items-center gap-3 min-w-0 flex-1`}
+                  >
                     <img
                       src={song.cover || "/default-cover.svg"}
                       alt={song.title}
@@ -297,13 +322,21 @@ export default function PlaylistView() {
                     {song.album}
                   </div>
 
-                  {/* Date Added (Desktop) */}
-                  <div className="col-span-2 hidden 2xl:block text-xs text-[#7e759a] truncate min-w-0 pr-2">
-                    {song.addedDate || "Baru saja"}
-                  </div>
+                  {/* Date Added (Desktop) - only when at least one sidebar is closed */}
+                  {showAddedDate && (
+                    <div className="col-span-2 hidden xl:block text-xs text-[#7e759a] truncate min-w-0 pr-2">
+                      {song.addedDate || "Baru saja"}
+                    </div>
+                  )}
 
                   {/* Actions: Add to Playlist, Like & Duration */}
-                  <div className="col-span-5 sm:col-span-5 md:col-span-3 2xl:col-span-2 flex items-center justify-end gap-1.5 sm:gap-2 text-xs shrink-0">
+                  <div
+                    className={`${
+                      showAddedDate
+                        ? "col-span-6 sm:col-span-6 md:col-span-4 xl:col-span-2"
+                        : "col-span-5 md:col-span-3"
+                    } flex items-center justify-end gap-1.5 sm:gap-2 text-xs shrink-0 pr-1`}
+                  >
 
                     {/* Add to Queue Button */}
                     <button

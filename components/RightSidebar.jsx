@@ -12,6 +12,7 @@ import {
   ChevronDown,
   ChevronUp,
   Loader2,
+  X,
 } from "lucide-react";
 
 export default function RightSidebar() {
@@ -27,6 +28,8 @@ export default function RightSidebar() {
     navigateTo,
     updateSongLyrics,
     activeView,
+    isRightSidebarOpen,
+    setIsRightSidebarOpen,
   } = useAudio();
 
   const [isLoadingLyrics, setIsLoadingLyrics] = useState(false);
@@ -184,7 +187,7 @@ export default function RightSidebar() {
     }
   }, [activeIndex, isUserScrolledAway]);
 
-  if (!currentSong || activeView === "lyrics") return null;
+  if (!currentSong || activeView === "lyrics" || !isRightSidebarOpen) return null;
 
   return (
     <aside className="hidden xl:flex select-none flex-col h-full min-h-0 w-80 2xl:w-96 bg-[#0b0517]/95 border-l border-purple-500/15 backdrop-blur-xl shrink-0 z-10 relative">
@@ -225,6 +228,15 @@ export default function RightSidebar() {
             title="Perbesar ke Mode Panggung Penuh"
           >
             <Maximize2 className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Close / Hide Right Sidebar */}
+          <button
+            onClick={() => setIsRightSidebarOpen(false)}
+            className="p-1.5 rounded-lg text-[#958dae] hover:text-white hover:bg-purple-950/40 transition-colors cursor-pointer"
+            title="Tutup Panel Lirik"
+          >
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>

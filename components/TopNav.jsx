@@ -224,6 +224,30 @@ export default function TopNav() {
           <ListMusic className="w-4 h-4" />
         </button>
 
+        {/* Toggle Right Lyrics Panel */}
+        <button
+          onClick={() => {
+            if (activeView === "lyrics") {
+              setIsRightSidebarOpen(true);
+              if (historyIndex > 0) {
+                goBack();
+              } else {
+                navigateTo("home");
+              }
+            } else {
+              setIsRightSidebarOpen(!isRightSidebarOpen);
+            }
+          }}
+          className={`hidden xl:flex w-8 h-8 rounded-full items-center justify-center transition-all cursor-pointer ${
+            isRightSidebarOpen
+              ? "bg-[#1f133b] text-purple-300 border border-purple-500/35 hover:bg-[#2c1c53] hover:text-white shadow-sm"
+              : "bg-[#150e26] text-purple-300/80 hover:text-white hover:bg-purple-600/25 border border-purple-500/25 hover:border-purple-500/50"
+          }`}
+          title={isRightSidebarOpen ? "Sembunyikan Panel Lirik (Kanan)" : "Buka Panel Lirik (Kanan)"}
+        >
+          <PanelRight className="w-4 h-4" />
+        </button>
+
         {/* Notification Bell */}
         <div className="relative" ref={notifMenuRef}>
           <button

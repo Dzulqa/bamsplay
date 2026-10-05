@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useAudio } from "@/context/AudioContext";
-import { Mic2, Loader2, ArrowDown } from "lucide-react";
+import { Mic2, Loader2, ArrowDown, Minimize2 } from "lucide-react";
 
 export default function LyricsView() {
   const {
@@ -11,6 +11,10 @@ export default function LyricsView() {
     seek,
     updateSongLyrics,
     isPlaying,
+    navigateTo,
+    goBack,
+    historyIndex,
+    setIsRightSidebarOpen,
   } = useAudio();
   const [isLoadingLyrics, setIsLoadingLyrics] = useState(false);
   const [isUserScrolledAway, setIsUserScrolledAway] = useState(false);
@@ -190,6 +194,25 @@ export default function LyricsView() {
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-purple-600/15 rounded-full blur-[140px] animate-pulse" />
         <div className="absolute bottom-1/3 right-1/4 w-[450px] h-[450px] bg-fuchsia-600/10 rounded-full blur-[140px]" />
+      </div>
+
+      {/* Top Right: Button to shrink full-screen lyrics back into right sidebar companion */}
+      <div className="absolute top-3.5 right-4 sm:top-5 sm:right-8 z-30 flex items-center gap-2">
+        <button
+          onClick={() => {
+            setIsRightSidebarOpen(true);
+            if (historyIndex > 0) {
+              goBack();
+            } else {
+              navigateTo("home");
+            }
+          }}
+          className="flex items-center gap-2 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full bg-[#1e1238]/90 hover:bg-[#2c1a52] text-purple-200 hover:text-white border border-purple-500/40 hover:border-purple-400 shadow-xl backdrop-blur-md transition-all cursor-pointer group text-xs font-bold active:scale-95"
+          title="Kecilkan ke Panel Samping (Right Sidebar)"
+        >
+          <Minimize2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-300 group-hover:scale-110 transition-transform" />
+          <span className="hidden sm:inline">Kecilkan ke Sidebar</span>
+        </button>
       </div>
 
       <div className="relative z-10 h-full max-w-7xl mx-auto px-6 sm:px-12">

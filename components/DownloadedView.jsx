@@ -37,10 +37,19 @@ export default function DownloadedView() {
     likedSongIds,
     isOfflineNetwork,
     setIsLoginModalOpen,
+    isSidebarCollapsed,
+    isRightSidebarOpen,
+    activeView,
   } = useAudio();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+
+  // Date/Size column is only displayed when there is sufficient horizontal space:
+  // i.e., when at least one sidebar is collapsed/closed.
+  const isRightSidebarVisible = isRightSidebarOpen && !!currentSong && activeView !== "lyrics";
+  const isBothSidebarsOpen = !isSidebarCollapsed && isRightSidebarVisible;
+  const showDateSize = !isBothSidebarsOpen;
 
   const songs = downloadedSongsList || [];
   const filteredSongs = songs.filter((s) => {
@@ -256,10 +265,22 @@ export default function DownloadedView() {
           {/* Table Header (Desktop) */}
           <div className="hidden sm:grid sm:grid-cols-12 gap-3 sm:gap-4 px-3 sm:px-4 py-2 text-[11px] font-bold text-[#8b81a8] uppercase tracking-wider border-b border-white/5 select-none">
             <div className="col-span-1 text-center">#</div>
-            <div className="col-span-6 sm:col-span-6 md:col-span-5 2xl:col-span-4">Judul Lagu</div>
+            <div className={showDateSize ? "col-span-5 md:col-span-4" : "col-span-6 md:col-span-5"}>
+              Judul Lagu
+            </div>
             <div className="col-span-3 hidden md:block truncate">Album</div>
-            <div className="col-span-2 hidden 2xl:block truncate">Ukuran / Waktu</div>
-            <div className="col-span-5 sm:col-span-5 md:col-span-3 2xl:col-span-2 text-right pr-1">Aksi</div>
+            {showDateSize && (
+              <div className="col-span-2 hidden xl:block truncate">Ukuran / Waktu</div>
+            )}
+            <div
+              className={`${
+                showDateSize
+                  ? "col-span-6 sm:col-span-6 md:col-span-4 xl:col-span-2"
+                  : "col-span-5 md:col-span-3"
+              } text-right pr-2`}
+            >
+              Aksi
+            </div>
           </div>
 
           {/* Song Rows */}
@@ -300,7 +321,13 @@ export default function DownloadedView() {
                 </div>
 
                 {/* Title & Cover */}
-                <div className="col-span-6 sm:col-span-6 md:col-span-5 2xl:col-span-4 flex items-center gap-3 min-w-0 flex-1">
+                <div
+                  className={`${
+                    showDateSize
+                      ? "col-span-5 md:col-span-4"
+                      : "col-span-6 md:col-span-5"
+                  } flex items-center gap-3 min-w-0 flex-1`}
+                >
                   <div className="relative w-10 h-10 rounded-md overflow-hidden shrink-0 shadow-sm">
                     <img
                       src={song.cover || "/default-cover.svg"}
@@ -349,18 +376,26 @@ export default function DownloadedView() {
                   {song.album || "Single"}
                 </div>
 
-                {/* Storage size & download date */}
-                <div className="col-span-2 hidden 2xl:flex flex-col text-[11px] truncate min-w-0 pr-2">
-                  <span className="text-emerald-300 font-mono font-medium truncate">
-                    {formatSize(song.storageSize)}
-                  </span>
-                  <span className="text-[#7e759a] text-[10px] truncate">
-                    Diunduh {formatDate(song.downloadedAt)}
-                  </span>
-                </div>
+                {/* Storage size & download date - only when at least one sidebar is closed */}
+                {showDateSize && (
+                  <div className="col-span-2 hidden xl:flex flex-col text-[11px] truncate min-w-0 pr-2">
+                    <span className="text-emerald-300 font-mono font-medium truncate">
+                      {formatSize(song.storageSize)}
+                    </span>
+                    <span className="text-[#7e759a] text-[10px] truncate">
+                      Diunduh {formatDate(song.downloadedAt)}
+                    </span>
+                  </div>
+                )}
 
                 {/* Actions */}
-                <div className="col-span-5 sm:col-span-5 md:col-span-3 2xl:col-span-2 flex items-center justify-end gap-1.5 sm:gap-2 text-xs shrink-0">
+                <div
+                  className={`${
+                    showDateSize
+                      ? "col-span-6 sm:col-span-6 md:col-span-4 xl:col-span-2"
+                      : "col-span-5 md:col-span-3"
+                  } flex items-center justify-end gap-1.5 sm:gap-2 text-xs shrink-0 pr-1`}
+                >
                   <span className="hidden sm:inline-block font-mono text-[11px] text-[#8e84ab] mr-1">
                     {song.duration || "3:30"}
                   </span>

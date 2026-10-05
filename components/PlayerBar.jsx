@@ -61,6 +61,8 @@ export default function PlayerBar() {
     addToQueue,
     userQueue,
     navigateTo,
+    goBack,
+    historyIndex,
     showToast,
     openAddToPlaylistModal,
   } = useAudio();
@@ -441,13 +443,36 @@ export default function PlayerBar() {
         {/* Right: Tools & Volume */}
         <div className="flex items-center justify-end gap-3 w-1/4 min-w-[200px] text-[#958dae]">
           <button
-            onClick={() => navigateTo(activeView === "lyrics" ? "home" : "lyrics")}
+            onClick={() => {
+              if (activeView === "lyrics") {
+                // Sedang di mode layar penuh lirik -> kecilkan kembali ke right sidebar
+                setIsRightSidebarOpen(true);
+                if (historyIndex > 0) {
+                  goBack();
+                } else {
+                  navigateTo("home");
+                }
+              } else {
+                // Sedang di view lain
+                if (typeof window !== "undefined" && window.innerWidth >= 1280) {
+                  setIsRightSidebarOpen(!isRightSidebarOpen);
+                } else {
+                  navigateTo("lyrics");
+                }
+              }
+            }}
             className={`p-2 rounded-xl transition-all cursor-pointer ${
-              activeView === "lyrics"
+              activeView === "lyrics" || (isRightSidebarOpen && activeView !== "lyrics")
                 ? "text-purple-300 bg-purple-600/30 border border-purple-500/40 shadow-sm"
                 : "hover:text-white hover:bg-purple-950/30"
             }`}
-            title="Lirik Mode Layar Penuh"
+            title={
+              activeView === "lyrics"
+                ? "Kecilkan Lirik ke Panel Samping"
+                : isRightSidebarOpen
+                ? "Sembunyikan Panel Lirik"
+                : "Buka Panel Lirik"
+            }
           >
             <Mic2 className="w-4 h-4" />
           </button>
