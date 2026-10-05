@@ -12,6 +12,7 @@ import {
   ArrowRight,
   FolderUp,
   Music,
+  ArrowDownToLine,
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -22,6 +23,8 @@ export default function Sidebar() {
     navigateTo,
     setIsCreatePlaylistModalOpen,
     likedSongIds,
+    downloadedSongIds,
+    downloadStats,
     isSidebarCollapsed,
     setIsSidebarCollapsed,
     addLocalSongs,
@@ -38,19 +41,19 @@ export default function Sidebar() {
 
   return (
     <aside
-      className={`hidden md:flex flex-col select-none shrink-0 text-sm transition-all duration-300 ease-in-out bg-[#0e081c]/95 border-r border-purple-500/15 z-20 ${
-        isSidebarCollapsed ? "w-18 p-2" : "w-60 lg:w-64 p-3"
-      }`}
+      className={`hidden md:flex flex-col select-none shrink-0 text-sm transition-all duration-300 ease-in-out bg-[#0e081c]/95 border-r border-purple-500/15 z-20 ${isSidebarCollapsed
+        ? "w-0 p-0 border-r-0 opacity-0 overflow-hidden pointer-events-none"
+        : "w-60 lg:w-64 p-3 opacity-100"
+        }`}
     >
       {/* 1. BAMSPLAY SIGNATURE BRAND LOGO */}
       <div
         onClick={() => navigateTo("home")}
-        className={`flex items-center gap-3 py-3 px-2 mb-2 cursor-pointer group ${
-          isSidebarCollapsed ? "justify-center px-0" : ""
-        }`}
+        className={`flex items-center gap-3 py-3 px-2 mb-2 cursor-pointer group ${isSidebarCollapsed ? "justify-center px-0" : ""
+          }`}
         title="Bamsplay"
       >
-        <BamsplayLogo className="w-9 h-9 group-hover:scale-105 transition-transform shrink-0" shape="circle" />
+        {/* <BamsplayLogo className="w-9 h-9 group-hover:scale-105 transition-transform shrink-0" shape="circle" /> */}
 
         {!isSidebarCollapsed && (
           <div className="flex flex-col min-w-0">
@@ -71,41 +74,37 @@ export default function Sidebar() {
       <nav className="space-y-1 mb-4">
         <button
           onClick={() => navigateTo("home")}
-          className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl font-bold text-xs transition-all ${
-            activeView === "home"
-              ? "text-white bg-purple-900/40 border border-purple-500/30 shadow-sm"
-              : "text-[#9e95b9] hover:text-white hover:bg-purple-950/20"
-          } ${isSidebarCollapsed ? "justify-center px-0" : ""}`}
+          className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-md font-bold text-xs transition-all ${activeView === "home"
+            ? "text-white bg-purple-600/20 shadow-sm"
+            : "text-[#9e95b9] hover:text-white hover:bg-white/[0.04]"
+            } ${isSidebarCollapsed ? "justify-center px-0" : ""}`}
           title="Beranda"
         >
           <Home
-            className={`w-4 h-4 shrink-0 ${
-              activeView === "home" ? "text-purple-400" : ""
-            }`}
+            className={`w-4 h-4 shrink-0 ${activeView === "home" ? "text-purple-400" : ""
+              }`}
           />
           {!isSidebarCollapsed && <span>Beranda</span>}
         </button>
 
         <button
           onClick={() => navigateTo("search")}
-          className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl font-bold text-xs transition-all ${
-            activeView === "search"
-              ? "text-white bg-purple-900/40 border border-purple-500/30 shadow-sm"
-              : "text-[#9e95b9] hover:text-white hover:bg-purple-950/20"
-          } ${isSidebarCollapsed ? "justify-center px-0" : ""}`}
+          className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-md font-bold text-xs transition-all ${activeView === "search"
+            ? "text-white bg-purple-600/20 shadow-sm"
+            : "text-[#9e95b9] hover:text-white hover:bg-white/[0.04]"
+            } ${isSidebarCollapsed ? "justify-center px-0" : ""}`}
           title="Jelajahi"
         >
           <Search
-            className={`w-4 h-4 shrink-0 ${
-              activeView === "search" ? "text-purple-400" : ""
-            }`}
+            className={`w-4 h-4 shrink-0 ${activeView === "search" ? "text-purple-400" : ""
+              }`}
           />
           {!isSidebarCollapsed && <span>Jelajahi & Cari</span>}
         </button>
       </nav>
 
       {/* Divider */}
-      <div className="h-px bg-purple-500/15 my-2 mx-1" />
+      <div className="h-px bg-purple-500/10 my-2 mx-1" />
 
       {/* 3. KOLEKSI / LIBRARY */}
       <div className="flex-1 flex flex-col min-h-0">
@@ -150,15 +149,14 @@ export default function Sidebar() {
           {/* Liked Songs */}
           <div
             onClick={() => navigateTo("playlist", { playlistId: "liked-songs" })}
-            className={`flex items-center gap-3 p-2 rounded-xl cursor-pointer transition-all ${
-              activeView === "playlist" &&
+            className={`flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors ${activeView === "playlist" &&
               activeViewData?.playlistId === "liked-songs"
-                ? "bg-purple-900/35 border border-purple-500/30 text-white"
-                : "hover:bg-purple-950/20 text-[#c8c2dc]"
-            } ${isSidebarCollapsed ? "justify-center p-1.5" : ""}`}
+              ? "bg-purple-600/25 text-white"
+              : "hover:bg-white/[0.04] text-[#c8c2dc]"
+              } ${isSidebarCollapsed ? "justify-center p-1.5" : ""}`}
             title="Lagu Favorit"
           >
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center shrink-0 shadow-sm">
+            <div className="w-10 h-10 rounded-md bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center shrink-0 shadow-sm">
               <Heart className="w-4 h-4 text-white fill-white" />
             </div>
             {!isSidebarCollapsed && (
@@ -173,12 +171,44 @@ export default function Sidebar() {
             )}
           </div>
 
+          {/* Downloaded Songs (Offline) */}
+          <div
+            onClick={() => navigateTo("downloaded")}
+            className={`flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors ${
+              activeView === "downloaded"
+                ? "bg-emerald-950/40 text-emerald-300 border border-emerald-500/20"
+                : "hover:bg-white/[0.04] text-[#c8c2dc]"
+            } ${isSidebarCollapsed ? "justify-center p-1.5" : ""}`}
+            title="Lagu Terunduh (Offline)"
+          >
+            <div className="w-10 h-10 rounded-md bg-gradient-to-tr from-emerald-600 via-teal-700 to-emerald-800 flex items-center justify-center shrink-0 shadow-sm relative group-hover:scale-105 transition-transform">
+              <ArrowDownToLine className="w-4 h-4 text-emerald-200" />
+              {downloadedSongIds?.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-400 text-black font-extrabold text-[9px] rounded-full flex items-center justify-center shadow-md">
+                  {downloadedSongIds.length > 99 ? "99+" : downloadedSongIds.length}
+                </span>
+              )}
+            </div>
+            {!isSidebarCollapsed && (
+              <div className="min-w-0 flex-1">
+                <span className="font-bold text-xs truncate flex items-center justify-between text-white">
+                  <span>Lagu Terunduh</span>
+                  <span className="text-[9px] px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-medium">
+                    Offline
+                  </span>
+                </span>
+                <span className="text-[11px] text-[#8e85a6] truncate block">
+                  {downloadedSongIds?.length || 0} lagu • {downloadStats?.formattedSize || "0 MB"}
+                </span>
+              </div>
+            )}
+          </div>
+
           {/* Local Audio Upload Card */}
           <div
             onClick={() => fileInputRef.current?.click()}
-            className={`flex items-center gap-3 p-2 rounded-xl cursor-pointer transition-all hover:bg-purple-950/30 text-[#c8c2dc] group border border-dashed border-purple-500/20 hover:border-purple-500/50 ${
-              isSidebarCollapsed ? "justify-center p-1.5" : ""
-            }`}
+            className={`flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors hover:bg-white/[0.04] text-[#c8c2dc] group ${isSidebarCollapsed ? "justify-center p-1.5" : ""
+              }`}
             title="Unggah / Putar MP3 Asli (File Lokal)"
           >
             <input
@@ -189,7 +219,7 @@ export default function Sidebar() {
               onChange={handleFileChange}
               className="hidden"
             />
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-fuchsia-600 to-purple-800 flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+            <div className="w-10 h-10 rounded-md bg-gradient-to-tr from-fuchsia-600 to-purple-800 flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
               <FolderUp className="w-4 h-4 text-white" />
             </div>
             {!isSidebarCollapsed && (
@@ -215,11 +245,10 @@ export default function Sidebar() {
                 <div
                   key={pl.id}
                   onClick={() => navigateTo("playlist", { playlistId: pl.id })}
-                  className={`flex items-center gap-3 p-2 rounded-xl cursor-pointer transition-all ${
-                    isSelected
-                      ? "bg-purple-900/35 border border-purple-500/30 text-white"
-                      : "hover:bg-purple-950/20 text-[#c8c2dc]"
-                  } ${isSidebarCollapsed ? "justify-center p-1.5" : ""}`}
+                  className={`flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors ${isSelected
+                    ? "bg-purple-600/25 text-white"
+                    : "hover:bg-white/[0.04] text-[#c8c2dc]"
+                    } ${isSidebarCollapsed ? "justify-center p-1.5" : ""}`}
                   title={pl.title}
                 >
                   {pl.cover?.startsWith("http") ? (
@@ -230,7 +259,7 @@ export default function Sidebar() {
                         e.currentTarget.onerror = null;
                         e.currentTarget.src = "/default-cover.svg";
                       }}
-                      className="w-9 h-9 rounded-lg object-cover shrink-0 shadow-sm"
+                      className="w-10 h-10 rounded-md object-cover shrink-0 shadow-sm"
                     />
                   ) : (
                     <div
@@ -239,7 +268,7 @@ export default function Sidebar() {
                           pl.cover ||
                           "linear-gradient(135deg, #6366f1 0%, #4c1d95 100%)",
                       }}
-                      className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 shadow-sm text-white"
+                      className="w-10 h-10 rounded-md flex items-center justify-center shrink-0 shadow-sm text-white"
                     >
                       <Music className="w-4 h-4 text-purple-200" />
                     </div>
@@ -247,9 +276,8 @@ export default function Sidebar() {
                   {!isSidebarCollapsed && (
                     <div className="min-w-0 flex-1">
                       <span
-                        className={`font-semibold text-xs truncate block ${
-                          isSelected ? "text-purple-300 font-bold" : "text-white"
-                        }`}
+                        className={`font-semibold text-xs truncate block ${isSelected ? "text-purple-300 font-bold" : "text-white"
+                          }`}
                       >
                         {pl.title}
                       </span>
@@ -264,7 +292,7 @@ export default function Sidebar() {
 
           {/* Clean Empty State when no custom playlist exists yet */}
           {!isSidebarCollapsed && playlists.filter((p) => p.id !== "liked-songs").length === 0 && (
-            <div className="py-7 px-3 text-center border border-dashed border-purple-500/15 rounded-xl mt-2 bg-purple-950/10">
+            <div className="py-6 px-3 text-center rounded-lg mt-2 bg-white/[0.02] border border-white/5">
               <p className="text-xs font-semibold text-white/90">Belum ada playlist</p>
               <p className="text-[11px] text-[#8e85a6] mt-0.5 leading-relaxed">
                 Playlist yang kamu buat akan muncul di sini.

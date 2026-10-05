@@ -1,9 +1,8 @@
 // =====================================================================
 // Bamsplay Service Worker - PWA Offline Support
 // =====================================================================
-const CACHE_NAME = 'bamsplay-v1';
+const CACHE_NAME = 'bamsplay-v2';
 const STATIC_ASSETS = [
-  '/',
   '/manifest.json',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
@@ -13,7 +12,11 @@ const STATIC_ASSETS = [
 
 // ─── Install: cache static assets ────────────────────────────────────
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing Bamsplay service worker...');
+  // If running on localhost, skip and do not cache anything
+  if (self.location.hostname === 'localhost' || self.location.hostname === '127.0.0.1') {
+    self.skipWaiting();
+    return;
+  }
   event.waitUntil(
     caches
       .open(CACHE_NAME)
@@ -37,6 +40,10 @@ self.addEventListener('activate', (event) => {
 
 // ─── Fetch: network-first for API, cache-first for static ────────────
 self.addEventListener('fetch', (event) => {
+  // Never intercept requests on localhost in development
+  if (self.location.hostname === 'localhost' || self.location.hostname === '127.0.0.1') {
+    return;
+  }
   const { request } = event;
   const url = new URL(request.url);
 

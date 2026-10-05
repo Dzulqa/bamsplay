@@ -12,6 +12,8 @@ import CreatePlaylistModal from "@/components/CreatePlaylistModal";
 import AddToPlaylistModal from "@/components/AddToPlaylistModal";
 import DeviceModal from "@/components/DeviceModal";
 import AudioQualityModal from "@/components/AudioQualityModal";
+import LoginModal from "@/components/LoginModal";
+import EditProfileModal from "@/components/EditProfileModal";
 import GlobalAudioEngine from "@/components/GlobalAudioEngine";
 import Toast from "@/components/Toast";
 
@@ -43,6 +45,8 @@ export default function Home() {
         <AddToPlaylistModal />
         <DeviceModal />
         <AudioQualityModal />
+        <LoginModal />
+        <EditProfileModal />
         <Toast />
       </div>
     </AudioProvider>

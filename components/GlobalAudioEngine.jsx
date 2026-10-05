@@ -31,6 +31,7 @@ export default function GlobalAudioEngine() {
   const [isPlayerReady, setIsPlayerReady] = useState(false);
 
   const playerRef = useRef(null);
+  const containerRef = useRef(null);
   const pendingLoadYtIdRef = useRef(null);
   const activeYtIdRef = useRef(null);
   const timeSyncIntervalRef = useRef(null);
@@ -184,6 +185,17 @@ export default function GlobalAudioEngine() {
   // Initialize background player instance
   useEffect(() => {
     if (!isApiReady || typeof window === "undefined" || playerRef.current) return;
+    if (!containerRef.current) return;
+
+    // Ensure slot element exists in DOM (YouTube's destroy removes it)
+    let slot = document.getElementById("bamsplay-master-stream-player");
+    if (!slot) {
+      slot = document.createElement("div");
+      slot.id = "bamsplay-master-stream-player";
+      slot.style.width = "100%";
+      slot.style.height = "100%";
+      containerRef.current.appendChild(slot);
+    }
 
     const initialYtId = currentSong?.youtubeId || "";
     if (initialYtId) {
@@ -195,6 +207,7 @@ export default function GlobalAudioEngine() {
         height: "100%",
         width: "100%",
         videoId: initialYtId,
+        host: "https://www.youtube.com",
         playerVars: {
           autoplay: 0,
           controls: 0,
@@ -204,6 +217,7 @@ export default function GlobalAudioEngine() {
           rel: 0,
           playsinline: 1,
           enablejsapi: 1,
+          origin: typeof window !== "undefined" ? window.location.origin : undefined,
           iv_load_policy: 3,
           vq: "tiny", // Request 144p lowest resolution at initial handshake
         },
@@ -299,6 +313,11 @@ export default function GlobalAudioEngine() {
         } catch (_) {}
       }
       playerRef.current = null;
+      setIsPlayerReady(false);
+      // Immediately restore the slot div so next mount finds it
+      if (containerRef.current) {
+        containerRef.current.innerHTML = '<div id="bamsplay-master-stream-player" style="width:100%;height:100%"></div>';
+      }
     };
   }, [isApiReady]);
 
@@ -341,23 +360,37 @@ export default function GlobalAudioEngine() {
         }
       },
       play: () => {
-        if (playerRef.current && typeof playerRef.current.playVideo === "function") {
+        if (playerRef.current) {
           try {
             playerRef.current.unMute();
-            const vol = isMutedRef.current ? 0 : Math.round(volumeRef.current * 100);
+            const vol = computeMasterVol();
             playerRef.current.setVolume(vol);
 
             const curYt = currentSongRef.current?.youtubeId;
-            if (curYt && (!activeYtIdRef.current || activeYtIdRef.current !== curYt)) {
+            let playerState = -1;
+            try {
+              if (typeof playerRef.current.getPlayerState === "function") {
+                playerState = playerRef.current.getPlayerState();
+              }
+            } catch (_) {}
+
+            // If not loaded, or in unstarted (-1), cued (5), or ended (0) state, explicitly load
+            if (
+              curYt &&
+              (activeYtIdRef.current !== curYt || playerState === -1 || playerState === 5 || playerState === 0)
+            ) {
               activeYtIdRef.current = curYt;
-              playerRef.current.loadVideoById({
-                videoId: curYt,
-                startSeconds: 0,
-                suggestedQuality: "tiny",
-              });
+              if (typeof playerRef.current.loadVideoById === "function") {
+                playerRef.current.loadVideoById({
+                  videoId: curYt,
+                  startSeconds: 0,
+                  suggestedQuality: "tiny",
+                });
+              }
+            } else if (typeof playerRef.current.playVideo === "function") {
+              playerRef.current.playVideo();
             }
 
-            playerRef.current.playVideo();
             setIsPlaying(true);
             startTimeSync();
           } catch (e) {
@@ -412,6 +445,7 @@ export default function GlobalAudioEngine() {
   // Standard 200x200 dimensions ensure Chromium prioritizes the media clock without subpixel throttling.
   return (
     <div
+      ref={containerRef}
       aria-hidden="true"
       style={{
         position: "fixed",

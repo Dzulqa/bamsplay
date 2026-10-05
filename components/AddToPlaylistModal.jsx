@@ -70,7 +70,7 @@ export default function AddToPlaylistModal() {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-[#150d29] border border-purple-500/30 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200"
+        className="bg-[#150d29] border border-white/10 rounded-xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200"
       >
         {/* Modal Header */}
         <div className="flex items-center justify-between p-4 sm:p-5 border-b border-[#281b47]">
@@ -104,7 +104,7 @@ export default function AddToPlaylistModal() {
               e.currentTarget.onerror = null;
               e.currentTarget.src = "/default-cover.svg";
             }}
-            className="w-11 h-11 rounded-lg object-cover shadow border border-purple-500/20 shrink-0"
+            className="w-11 h-11 rounded-md object-cover shadow border border-white/10 shrink-0"
           />
           <div className="min-w-0 flex-1">
             <span className="font-bold text-xs sm:text-sm text-white truncate block">
@@ -193,15 +193,15 @@ export default function AddToPlaylistModal() {
                 <div
                   key={pl.id}
                   onClick={() => handleToggleSongInPlaylist(pl)}
-                  className={`flex items-center justify-between p-2 sm:p-2.5 rounded-xl cursor-pointer transition-all border ${
+                  className={`flex items-center justify-between p-2 sm:p-2.5 rounded-md cursor-pointer transition-colors border ${
                     isInPlaylist
                       ? "bg-purple-950/40 border-purple-500/40 text-purple-200"
-                      : "bg-[#110a24]/50 hover:bg-[#1f153a] border-transparent hover:border-purple-500/20 text-[#cbc5dc]"
+                      : "bg-[#110a24]/50 hover:bg-[#1f153a] border-transparent hover:border-white/5 text-[#cbc5dc]"
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0 flex-1 pr-2">
                     {/* Cover */}
-                    <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 border border-purple-500/20 shadow-sm flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-md overflow-hidden shrink-0 border border-white/10 shadow-sm flex items-center justify-center">
                       {pl.cover?.startsWith("http") ? (
                         <img
                           src={pl.cover}

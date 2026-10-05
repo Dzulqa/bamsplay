@@ -17,12 +17,13 @@ import {
   Mic2,
   ListMusic,
   ListPlus,
-  Laptop2,
   Maximize2,
   Minimize2,
-  Activity,
   Sliders,
   Sparkles,
+  ArrowDownToLine,
+  CheckCircle2,
+  Loader2,
 } from "lucide-react";
 
 export default function PlayerBar() {
@@ -36,12 +37,15 @@ export default function PlayerBar() {
     isShuffle,
     repeatMode,
     likedSongIds,
+    downloadedSongIds,
+    downloadingMap,
+    downloadSong,
+    removeDownloadedSong,
     activeView,
     activeViewData,
     queue,
     isRightSidebarOpen,
     setIsRightSidebarOpen,
-    setIsDeviceModalOpen,
     setIsAudioQualityModalOpen,
     audioQuality,
     setIsMobilePlayerOpen,
@@ -55,6 +59,7 @@ export default function PlayerBar() {
     toggleShuffle,
     toggleRepeat,
     addToQueue,
+    userQueue,
     navigateTo,
     showToast,
     openAddToPlaylistModal,
@@ -66,7 +71,9 @@ export default function PlayerBar() {
 
   if (!currentSong) return null;
 
-  const isLiked = likedSongIds.includes(currentSong.id);
+  const isLiked = likedSongIds?.includes(currentSong.id);
+  const isDownloaded = downloadedSongIds?.includes(currentSong?.id);
+  const isDownloading = !!downloadingMap?.[currentSong?.id];
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   const formatTime = (secs) => {
@@ -102,13 +109,13 @@ export default function PlayerBar() {
       <div className="md:hidden px-3 pb-2 pt-1 select-none z-30">
         <div
           onClick={() => setIsMobilePlayerOpen(true)}
-          className="h-14 bg-[#140c2a]/95 backdrop-blur-xl border border-purple-500/25 rounded-2xl px-3 flex items-center justify-between shadow-2xl cursor-pointer relative overflow-hidden"
+          className="h-14 bg-[#140c2a]/95 backdrop-blur-xl border border-white/10 rounded-xl px-3 flex items-center justify-between shadow-2xl cursor-pointer relative overflow-hidden"
         >
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <img
               src={currentSong.cover || "/default-cover.svg"}
               alt={currentSong.title}
-              className="w-10 h-10 rounded-xl object-cover shrink-0 shadow-md"
+              className="w-10 h-10 rounded-md object-cover shrink-0 shadow-md"
               onError={(e) => {
                 if (currentSong?.fallbackCover && e.currentTarget.src !== currentSong.fallbackCover) {
                   e.currentTarget.src = currentSong.fallbackCover;
@@ -152,6 +159,36 @@ export default function PlayerBar() {
             </button>
 
             <button
+              onClick={() =>
+                isDownloaded
+                  ? removeDownloadedSong(currentSong.id)
+                  : downloadSong(currentSong)
+              }
+              className={`p-1.5 transition-colors ${
+                isDownloaded
+                  ? "text-emerald-400"
+                  : isDownloading
+                  ? "text-purple-400 animate-spin"
+                  : "text-[#9a91b4] hover:text-white"
+              }`}
+              title={
+                isDownloaded
+                  ? "Terunduh untuk offline (Klik untuk hapus)"
+                  : isDownloading
+                  ? "Sedang mengunduh..."
+                  : "Unduh Lagu Offline"
+              }
+            >
+              {isDownloading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : isDownloaded ? (
+                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+              ) : (
+                <ArrowDownToLine className="w-5 h-5" />
+              )}
+            </button>
+
+            <button
               onClick={togglePlay}
               className="w-9 h-9 rounded-full bg-gradient-to-tr from-purple-600 to-fuchsia-600 text-white flex items-center justify-center purple-glow-sm active:scale-95 transition-transform"
             >
@@ -178,7 +215,7 @@ export default function PlayerBar() {
         <div className="flex items-center gap-3.5 w-1/4 min-w-[200px] max-w-[320px]">
           <div
             onClick={() => navigateTo("lyrics")}
-            className="relative group cursor-pointer w-12 h-12 rounded-xl overflow-hidden shrink-0 shadow-lg border border-purple-500/20"
+            className="relative group cursor-pointer w-12 h-12 rounded-md overflow-hidden shrink-0 shadow-md border border-white/10"
             title="Buka Lirik"
           >
             <img
@@ -221,25 +258,6 @@ export default function PlayerBar() {
               >
                 {currentSong.artist}
               </span>
-              <button
-                onClick={() => setIsAudioQualityModalOpen(true)}
-                className="px-1.5 py-0.5 bg-purple-900/40 hover:bg-purple-800/60 border border-purple-500/30 text-purple-300 hover:text-white rounded text-[9px] font-mono font-bold shrink-0 transition-all cursor-pointer flex items-center gap-1"
-                title="Buka Pengaturan Kualitas Suara"
-                suppressHydrationWarning
-              >
-                <Sparkles className="w-2.5 h-2.5 text-purple-400" />
-                <span suppressHydrationWarning>
-                  {audioQuality === "lossless"
-                    ? "320k HiFi"
-                    : audioQuality === "high"
-                    ? "160k HD"
-                    : audioQuality === "normal"
-                    ? "96k"
-                    : audioQuality === "low"
-                    ? "24k"
-                    : "AUTO"}
-                </span>
-              </button>
             </div>
           </div>
 
@@ -271,6 +289,36 @@ export default function PlayerBar() {
             >
               <ListPlus className="w-4 h-4" />
             </button>
+
+            <button
+              onClick={() =>
+                isDownloaded
+                  ? removeDownloadedSong(currentSong.id)
+                  : downloadSong(currentSong)
+              }
+              className={`p-1.5 transition-colors focus:outline-none ${
+                isDownloaded
+                  ? "text-emerald-400 hover:text-emerald-300"
+                  : isDownloading
+                  ? "text-purple-400"
+                  : "text-[#9d94b8] hover:text-white"
+              }`}
+              title={
+                isDownloaded
+                  ? "Tersimpan offline (Klik untuk hapus)"
+                  : isDownloading
+                  ? "Sedang mengunduh lagu..."
+                  : "Unduh Lagu (Putar Offline)"
+              }
+            >
+              {isDownloading ? (
+                <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
+              ) : isDownloaded ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              ) : (
+                <ArrowDownToLine className="w-4 h-4" />
+              )}
+            </button>
           </div>
         </div>
 
@@ -298,10 +346,10 @@ export default function PlayerBar() {
               <SkipBack className="w-4 h-4 fill-current" />
             </button>
 
-            {/* Bamsplay Signature Play/Pause Button */}
+            {/* Circular Play/Pause Button */}
             <button
               onClick={togglePlay}
-              className="w-9 h-9 rounded-full bg-gradient-to-tr from-purple-600 to-fuchsia-600 hover:from-purple-500 hover:to-fuchsia-500 text-white flex items-center justify-center purple-glow-sm hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-lg"
+              className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-600 to-fuchsia-600 hover:from-purple-500 hover:to-fuchsia-500 hover:scale-105 active:scale-95 text-white flex items-center justify-center transition-all cursor-pointer shadow-md"
               title={isPlaying ? "Jeda" : "Putar"}
             >
               {isPlaying ? (
@@ -394,22 +442,29 @@ export default function PlayerBar() {
         <div className="flex items-center justify-end gap-3 w-1/4 min-w-[200px] text-[#958dae]">
           <button
             onClick={() => navigateTo(activeView === "lyrics" ? "home" : "lyrics")}
-            className={`p-2 rounded-xl hover:text-white transition-colors ${
-              activeView === "lyrics" ? "text-purple-400 bg-purple-950/60 border border-purple-500/30" : "hover:bg-purple-950/30"
+            className={`p-2 rounded-xl transition-all cursor-pointer ${
+              activeView === "lyrics"
+                ? "text-purple-300 bg-purple-600/30 border border-purple-500/40 shadow-sm"
+                : "hover:text-white hover:bg-purple-950/30"
             }`}
-            title="Lirik Lagu"
+            title="Lirik Mode Layar Penuh"
           >
             <Mic2 className="w-4 h-4" />
           </button>
 
           <button
             onClick={() => navigateTo(activeView === "queue" ? "home" : "queue")}
-            className={`p-2 rounded-xl hover:text-white transition-colors ${
+            className={`p-2 rounded-xl hover:text-white transition-colors relative ${
               activeView === "queue" ? "text-purple-400 bg-purple-950/60 border border-purple-500/30" : "hover:bg-purple-950/30"
             }`}
-            title="Antrean Musik"
+            title={userQueue?.length > 0 ? `Antrean Musik (${userQueue.length} lagu di antrean)` : "Antrean Musik"}
           >
             <ListMusic className="w-4 h-4" />
+            {userQueue?.length > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-purple-600 text-[10px] font-black text-white rounded-full flex items-center justify-center border border-[#120a21] shadow-sm animate-pulse">
+                {userQueue.length}
+              </span>
+            )}
           </button>
 
           <button
@@ -421,19 +476,11 @@ export default function PlayerBar() {
             <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full animate-pulse" />
           </button>
 
-          <button
-            onClick={() => setIsDeviceModalOpen(true)}
-            className="p-2 rounded-xl hover:text-white hover:bg-purple-950/30 transition-colors"
-            title="Perangkat Output"
-          >
-            <Laptop2 className="w-4 h-4" />
-          </button>
-
-          {/* Volume Control */}
-          <div className="flex items-center gap-2 group w-24">
+          {/* Volume Control (Extended Width) */}
+          <div className="flex items-center gap-2.5 group w-32 md:w-36 lg:w-44">
             <button
               onClick={toggleMute}
-              className="hover:text-white transition-colors"
+              className="hover:text-white transition-colors shrink-0"
               title={isMuted ? "Bunyikan" : "Bisukan"}
             >
               {isMuted || volume === 0 ? (
@@ -445,10 +492,10 @@ export default function PlayerBar() {
               )}
             </button>
 
-            <div className="relative flex-1 flex items-center">
+            <div className="relative flex-1 flex items-center py-1">
               <div className="w-full h-1 bg-purple-950/50 rounded-full overflow-hidden group-hover:h-1.5 transition-all">
                 <div
-                  className="h-full bg-purple-300 group-hover:bg-purple-400 transition-colors"
+                  className="h-full bg-gradient-to-r from-purple-400 to-purple-200 group-hover:from-purple-400 group-hover:to-fuchsia-300 transition-colors"
                   style={{ width: `${isMuted ? 0 : volume * 100}%` }}
                 />
               </div>
@@ -463,18 +510,6 @@ export default function PlayerBar() {
               />
             </div>
           </div>
-
-          <button
-            onClick={() => setIsRightSidebarOpen(!isRightSidebarOpen)}
-            className={`p-2 rounded-xl transition-colors ${
-              isRightSidebarOpen
-                ? "text-purple-400 bg-purple-950/60 border border-purple-500/30"
-                : "hover:text-white hover:bg-purple-950/30"
-            }`}
-            title="Panel Detail Lagu"
-          >
-            <Activity className="w-4 h-4" />
-          </button>
 
           <button
             onClick={toggleFullscreenMode}

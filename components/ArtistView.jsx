@@ -12,6 +12,7 @@ import {
   Disc3,
   Flame,
   ListPlus,
+  ListMusic,
 } from "lucide-react";
 import { topArtists } from "@/data/musicData";
 
@@ -25,6 +26,7 @@ export default function ArtistView() {
     togglePlay,
     likedSongIds,
     toggleLike,
+    addToQueue,
     showToast,
     openAddToPlaylistModal,
   } = useAudio();
@@ -52,7 +54,7 @@ export default function ArtistView() {
     if (isPlayingArtist) {
       togglePlay();
     } else {
-      playSong(sampleSong);
+      playSong(sampleSong, null, artistSongs);
     }
   };
 
@@ -151,7 +153,7 @@ export default function ArtistView() {
             return (
               <div
                 key={song.id}
-                onClick={() => playSong(song)}
+                onClick={() => playSong(song, null, artistSongs)}
                 className={`grid grid-cols-12 gap-3 sm:gap-4 items-center px-4 py-2.5 rounded-xl group cursor-pointer transition-colors ${
                   isThisPlaying
                     ? "bg-purple-950/35 border border-purple-500/30 text-purple-300"
@@ -212,6 +214,17 @@ export default function ArtistView() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
+                      addToQueue(song);
+                    }}
+                    className="text-[#877e9f] hover:text-purple-300 p-1"
+                    title="Tambahkan ke Antrean"
+                  >
+                    <ListMusic className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
                       openAddToPlaylistModal(song);
                     }}
                     className="text-[#877e9f] hover:text-purple-300 p-1"
@@ -255,9 +268,9 @@ export default function ArtistView() {
           {discography.map((albumName, idx) => (
             <div
               key={idx}
-              className="p-4 bg-[#140d28]/70 hover:bg-[#1d1338] rounded-2xl border border-purple-500/15 transition-all flex items-center gap-3.5 group cursor-pointer"
+              className="p-3.5 bg-[#140d28]/70 hover:bg-[#1d1338] rounded-md sm:rounded-lg border border-transparent hover:border-white/5 transition-all flex items-center gap-3.5 group cursor-pointer"
             >
-              <div className="w-12 h-12 rounded-xl bg-purple-950/60 border border-purple-500/30 flex items-center justify-center text-purple-300 shrink-0 group-hover:scale-105 transition-transform">
+              <div className="w-12 h-12 rounded-md bg-purple-950/60 border border-purple-500/20 flex items-center justify-center text-purple-300 shrink-0 group-hover:scale-105 transition-transform">
                 <Disc3 className="w-6 h-6" />
               </div>
               <div className="min-w-0 flex-1">
@@ -274,7 +287,7 @@ export default function ArtistView() {
       </div>
 
       {/* 5. Biography & About */}
-      <div className="bg-[#120a22] rounded-3xl p-6 sm:p-8 border border-purple-500/15 space-y-3">
+      <div className="bg-[#120a22] rounded-xl p-6 sm:p-8 border border-white/5 space-y-3">
         <h3 className="text-lg font-bold text-white">Tentang {artistName}</h3>
         <p className="text-xs sm:text-sm text-[#aba3c7] leading-relaxed max-w-3xl">
           {artistInfo.bio}

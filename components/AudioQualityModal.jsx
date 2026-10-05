@@ -242,13 +242,13 @@ export default function AudioQualityModal() {
       onClick={() => setIsAudioQualityModalOpen(false)}
     >
       <div
-        className="relative w-full max-w-xl bg-gradient-to-b from-[#1c1236] to-[#0f091f] border border-purple-500/30 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="relative w-full max-w-xl bg-gradient-to-b from-[#1c1236] to-[#0f091f] border border-white/10 rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-5 border-b border-purple-500/20 flex items-center justify-between bg-purple-950/30">
+        <div className="p-5 border-b border-white/10 flex items-center justify-between bg-purple-950/30">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-600 to-fuchsia-600 flex items-center justify-center text-white shadow-lg purple-glow-sm">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-purple-600 to-fuchsia-600 flex items-center justify-center text-white shadow-lg">
               <Sliders className="w-5 h-5" />
             </div>
             <div>

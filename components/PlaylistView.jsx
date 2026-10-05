@@ -13,7 +13,11 @@ import {
   Check,
   Search,
   ListPlus,
+  ListMusic,
   Trash2,
+  ArrowDownToLine,
+  CheckCircle2,
+  Loader2,
 } from "lucide-react";
 
 export default function PlaylistView() {
@@ -27,6 +31,11 @@ export default function PlaylistView() {
     togglePlay,
     likedSongIds,
     toggleLike,
+    downloadedSongIds,
+    downloadingMap,
+    downloadSong,
+    removeDownloadedSong,
+    addToQueue,
     navigateTo,
     showToast,
     openAddToPlaylistModal,
@@ -74,7 +83,7 @@ export default function PlaylistView() {
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row items-center sm:items-end gap-5 p-4 sm:p-6 -mx-3 sm:-mx-6 -mt-3 sm:-mt-6 bg-gradient-to-b from-purple-950/60 via-[#150e2d]/80 to-[#0c0817] border-b border-[#20153d] relative">
         {/* Cover Art */}
-        <div className="w-36 h-36 sm:w-48 sm:h-48 md:w-56 md:h-56 rounded-xl overflow-hidden shrink-0 shadow-2xl border border-purple-500/20">
+        <div className="w-36 h-36 sm:w-48 sm:h-48 md:w-56 md:h-56 rounded-md sm:rounded-lg overflow-hidden shrink-0 shadow-2xl border border-white/10">
           {playlist.cover.startsWith("http") ? (
             <img
               src={playlist.cover}
@@ -140,26 +149,34 @@ export default function PlaylistView() {
           </button>
 
           <button
-            onClick={() => {
-              setIsDownloaded(!isDownloaded);
-              showToast(
-                isDownloaded
-                  ? "Unduhan dihapus"
-                  : "Daftar putar diunduh untuk mode offline 📥",
-                "purple"
+            onClick={async () => {
+              const toDownload = playlistSongs.filter(
+                (s) => !downloadedSongIds?.includes(s.id)
               );
+              if (toDownload.length === 0) {
+                showToast("Semua lagu di playlist ini sudah tersimpan offline!", "purple");
+                return;
+              }
+              showToast(`Memulai unduhan ${toDownload.length} lagu playlist untuk offline...`, "purple");
+              for (const s of toDownload) {
+                await downloadSong(s);
+              }
             }}
             className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center border transition-colors ${
-              isDownloaded
-                ? "bg-purple-900/40 text-purple-400 border-purple-500"
+              playlistSongs.length > 0 && playlistSongs.every((s) => downloadedSongIds?.includes(s.id))
+                ? "bg-emerald-950/60 text-emerald-400 border-emerald-500/50"
                 : "border-[#312554] text-[#9a91b4] hover:text-white"
             }`}
-            title="Unduh"
+            title={
+              playlistSongs.length > 0 && playlistSongs.every((s) => downloadedSongIds?.includes(s.id))
+                ? "Semua lagu di playlist ini terunduh offline"
+                : "Unduh Semua Lagu di Playlist Ini"
+            }
           >
-            {isDownloaded ? (
-              <Check className="w-4 h-4" />
+            {playlistSongs.length > 0 && playlistSongs.every((s) => downloadedSongIds?.includes(s.id)) ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
             ) : (
-              <Download className="w-4 h-4" />
+              <ArrowDownToLine className="w-4 h-4" />
             )}
           </button>
 
@@ -207,6 +224,8 @@ export default function PlaylistView() {
             filteredSongs.map((song, index) => {
               const isThisPlaying = isPlaying && currentSong?.id === song.id;
               const isLiked = likedSongIds.includes(song.id);
+              const isSongDl = downloadedSongIds?.includes(song.id);
+              const isSongDling = !!downloadingMap?.[song.id];
 
               return (
                 <div
@@ -286,6 +305,18 @@ export default function PlaylistView() {
                   {/* Actions: Add to Playlist, Like & Duration */}
                   <div className="col-span-6 sm:col-span-6 md:col-span-4 lg:col-span-2 flex items-center justify-end gap-2 text-xs shrink-0">
 
+                    {/* Add to Queue Button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        addToQueue(song);
+                      }}
+                      className="text-[#877e9f] hover:text-purple-300 p-1 opacity-70 group-hover:opacity-100 transition-opacity"
+                      title="Tambahkan ke Antrean"
+                    >
+                      <ListMusic className="w-4 h-4" />
+                    </button>
+
                     {/* Add to Playlist Button */}
                     <button
                       onClick={(e) => {
@@ -327,6 +358,40 @@ export default function PlaylistView() {
                             : "opacity-70 group-hover:opacity-100"
                         }`}
                       />
+                    </button>
+
+                    {/* Download button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isSongDl) {
+                          removeDownloadedSong(song.id);
+                        } else {
+                          downloadSong(song);
+                        }
+                      }}
+                      className={`p-1 transition-all ${
+                        isSongDl
+                          ? "text-emerald-400 opacity-100"
+                          : isSongDling
+                          ? "text-purple-400 opacity-100"
+                          : "text-[#877e9f] hover:text-white opacity-0 group-hover:opacity-100"
+                      }`}
+                      title={
+                        isSongDl
+                          ? "Lagu terunduh (Klik untuk hapus dari offline)"
+                          : isSongDling
+                          ? "Sedang mengunduh lagu..."
+                          : "Unduh untuk putar offline"
+                      }
+                    >
+                      {isSongDling ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-400" />
+                      ) : isSongDl ? (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                      ) : (
+                        <ArrowDownToLine className="w-3.5 h-3.5" />
+                      )}
                     </button>
 
                     <span className="font-mono text-[#8a81a4] text-xs">

@@ -4,9 +4,9 @@ import { NextResponse } from "next/server";
 // Every ID is verified to be pure studio audio or official lyric/visualizer video (starts at 0.0s)
 const resolvedCache = new Map([
   // ── BERNADYA ──────────────────────────────────────────────────────────
-  ["bernadya satu bulan", "yjnSX_iUFVo"],
-  ["bernadya - satu bulan", "yjnSX_iUFVo"],
-  ["bernadya satu bulan babak penutup", "yjnSX_iUFVo"],
+  ["bernadya satu bulan", "7Jm2Il2U-c0"],
+  ["bernadya - satu bulan", "7Jm2Il2U-c0"],
+  ["bernadya satu bulan babak penutup", "7Jm2Il2U-c0"],
   ["bernadya untungnya hidup harus tetap berjalan", "HB8vftGxsIc"],
   ["bernadya - untungnya hidup harus tetap berjalan", "HB8vftGxsIc"],
   ["bernadya kata mereka ini berlebihan", "9hjMIOIysng"],
@@ -29,9 +29,13 @@ const resolvedCache = new Map([
   ["tiara andini perjalanan", "nKSylKpqln4"],
 
   // ── SAL PRIADI ────────────────────────────────────────────────────────
-  ["sal priadi gala bunga matahari", "AQpEIZ8dNcU"],
-  ["sal priadi - gala bunga matahari", "AQpEIZ8dNcU"],
-  ["sal priadi dari planet lain", "5NPu6JHzbuo"],
+  // Official Lyric Video — pure studio audio without Gempi intro humming or sketches
+  ["sal priadi gala bunga matahari", "kv2WIY8RLQQ"],
+  ["sal priadi - gala bunga matahari", "kv2WIY8RLQQ"],
+  ["gala bunga matahari sal priadi", "kv2WIY8RLQQ"],
+  ["gala bunga matahari", "kv2WIY8RLQQ"],
+  ["sal priadi dari planet lain", "rfcCdZgxAPA"],
+  ["dari planet lain sal priadi", "rfcCdZgxAPA"],
   ["sal priadi amin paling serius", "ZRMDxjRdJV8"],
   ["sal priadi nadin amizah amin paling serius", "ZRMDxjRdJV8"],
   ["amin paling serius sal priadi", "ZRMDxjRdJV8"],
@@ -227,6 +231,51 @@ const resolvedCache = new Map([
   // ── CARLY RAE JEPSEN ──────────────────────────────────────────────────
   ["carly rae jepsen call me maybe", "fWNaR-rxAIC"],
   ["call me maybe carly rae jepsen", "fWNaR-rxAIC"],
+
+  // ── TAYLOR SWIFT ──────────────────────────────────────────────────────
+  ["taylor swift cruel summer", "ic8j13piAhQ"],
+  ["taylor swift - cruel summer", "ic8j13piAhQ"],
+  ["cruel summer taylor swift", "ic8j13piAhQ"],
+  ["taylor swift fortnight", "HzsQHfBA3MY"],
+  ["taylor swift fortnight post malone", "HzsQHfBA3MY"],
+  ["taylor swift anti-hero", "XqN2qFvY64U"],
+  ["taylor swift - anti-hero", "XqN2qFvY64U"],
+  ["anti-hero taylor swift", "XqN2qFvY64U"],
+
+  // ── BILLIE EILISH ─────────────────────────────────────────────────────
+  ["billie eilish birds of a feather", "d5gf9dXbPi0"],
+  ["billie eilish - birds of a feather", "d5gf9dXbPi0"],
+  ["birds of a feather billie eilish", "d5gf9dXbPi0"],
+  ["billie eilish bad guy", "DyDfgMOUjCI"],
+  ["billie eilish - bad guy", "DyDfgMOUjCI"],
+
+  // ── SABRINA CARPENTER ─────────────────────────────────────────────────
+  ["sabrina carpenter espresso", "51zjlMhdSTE"],
+  ["sabrina carpenter - espresso", "51zjlMhdSTE"],
+  ["espresso sabrina carpenter", "51zjlMhdSTE"],
+  ["sabrina carpenter please please please", "Yl_thbk40A0"],
+  ["sabrina carpenter - please please please", "Yl_thbk40A0"],
+
+  // ── THE WEEKND ────────────────────────────────────────────────────────
+  ["the weeknd blinding lights", "fHI8X4OXluQ"],
+  ["the weeknd - blinding lights", "fHI8X4OXluQ"],
+  ["the weeknd starboy", "dMMUH_ZpbB0"],
+  ["the weeknd starboy daft punk", "dMMUH_ZpbB0"],
+
+  // ── OLIVIA RODRIGO ────────────────────────────────────────────────────
+  ["olivia rodrigo vampire", "Fqey8LxQxFU"],
+  ["olivia rodrigo - vampire", "Fqey8LxQxFU"],
+  ["vampire olivia rodrigo", "Fqey8LxQxFU"],
+  ["olivia rodrigo deja vu", "fWgboQNNfB8"],
+  ["olivia rodrigo - deja vu", "fWgboQNNfB8"],
+
+  // ── NIKI / JOJI ───────────────────────────────────────────────────────
+  ["niki high school in jakarta", "tzG3GFfm8vs"],
+  ["niki - high school in jakarta", "tzG3GFfm8vs"],
+  ["niki lowkey", "9jz3fWYwMuc"],
+  ["niki - lowkey", "9jz3fWYwMuc"],
+  ["joji glimpse of us", "xuGaLIleROI"],
+  ["joji - glimpse of us", "xuGaLIleROI"],
 
   // ── ONE DIRECTION ─────────────────────────────────────────────────────
   ["one direction what makes you beautiful", "QJO3ROT-A4E"],

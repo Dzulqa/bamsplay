@@ -2,52 +2,87 @@
 
 import React from "react";
 import { useAudio } from "@/context/AudioContext";
-import { Play, Pause, ListMusic, Trash2, Heart, ListPlus } from "lucide-react";
+import {
+  Play,
+  Pause,
+  ListMusic,
+  Trash2,
+  Heart,
+  ListPlus,
+  ArrowUp,
+  ArrowDown,
+  Sparkles,
+  Music,
+} from "lucide-react";
 
 export default function QueueView() {
   const {
     currentSong,
+    currentPlaylist,
     queue,
+    userQueue,
     isPlaying,
     playSong,
+    playFromUserQueue,
+    moveInUserQueue,
+    removeFromUserQueue,
+    clearUserQueue,
     togglePlay,
     likedSongIds,
     toggleLike,
-    showToast,
     openAddToPlaylistModal,
-    clearQueue,
-    removeFromQueue,
   } = useAudio();
 
-  const currentIndex = queue.findIndex((s) => s.id === currentSong?.id);
-  const nextSongs =
-    currentIndex !== -1 ? queue.slice(currentIndex + 1) : queue;
+  const currentIndex = queue.findIndex(
+    (s) =>
+      s.id === currentSong?.id ||
+      (s.title?.toLowerCase().trim() === currentSong?.title?.toLowerCase().trim() &&
+        s.artist?.toLowerCase().trim() === currentSong?.artist?.toLowerCase().trim())
+  );
+
+  const contextUpcoming =
+    currentIndex !== -1 ? queue.slice(currentIndex + 1) : queue.filter((s) => s.id !== currentSong?.id);
+
+  const contextSourceTitle = currentPlaylist?.title || "Katalog Bamsplay";
 
   return (
-    <div className="relative pb-24 select-none">
+    <div className="relative pb-28 select-none max-w-5xl mx-auto px-1 sm:px-2">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6 pb-4 border-b border-[#251b47]">
-        <div className="w-10 h-10 rounded-full bg-purple-700/40 flex items-center justify-center text-purple-300 border border-purple-500/30">
-          <ListMusic className="w-5 h-5" />
+      <div className="flex items-center justify-between gap-3 mb-6 pb-4 border-b border-[#251b47]">
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-purple-700 to-fuchsia-600 flex items-center justify-center text-white shadow-lg shadow-purple-900/30">
+            <ListMusic className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Antrean Putar</h1>
+            <p className="text-xs text-[#a097bf]">
+              Urutan pemutaran audio ala Spotify • Antrean manual diputar lebih dulu
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-extrabold text-white">Antrean Putar</h1>
-          <p className="text-xs text-[#9c93be]">
-            Atur dan lihat urutan lagu yang akan diputar berikutnya
-          </p>
-        </div>
+
+        {userQueue.length > 0 && (
+          <button
+            onClick={clearUserQueue}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-purple-300 hover:text-white bg-purple-950/60 hover:bg-purple-900/60 border border-purple-500/30 rounded-full transition-all"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            Kosongkan Antrean ({userQueue.length})
+          </button>
+        )}
       </div>
 
-      {/* Currently Playing Track */}
+      {/* 1. CURRENTLY PLAYING TRACK */}
       <div className="mb-8">
-        <h2 className="text-xs font-bold text-[#8d84a7] uppercase tracking-wider mb-3">
+        <h2 className="text-xs font-extrabold text-[#948cae] uppercase tracking-wider mb-3 flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse"></span>
           Sedang Memutar
         </h2>
 
-        {currentSong && (
-          <div className="flex items-center justify-between p-3.5 bg-purple-950/40 border border-purple-500/30 rounded-xl shadow-lg">
+        {currentSong ? (
+          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-950/60 to-[#1b1236]/80 border border-purple-500/30 rounded-2xl shadow-xl backdrop-blur-md">
             <div className="flex items-center gap-4 min-w-0">
-              <div className="relative w-14 h-14 rounded-lg overflow-hidden shrink-0 shadow-md">
+              <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden shrink-0 shadow-lg border border-purple-500/20">
                 <img
                   src={currentSong.cover || "/default-cover.svg"}
                   alt={currentSong.title}
@@ -58,97 +93,249 @@ export default function QueueView() {
                   className="w-full h-full object-cover"
                 />
                 {isPlaying && (
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center gap-0.5">
-                    <span className="w-1 bg-purple-400 rounded-full animate-eq-1"></span>
-                    <span className="w-1 bg-purple-400 rounded-full animate-eq-2"></span>
-                    <span className="w-1 bg-purple-400 rounded-full animate-eq-3"></span>
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center gap-1">
+                    <span className="w-1 bg-purple-400 rounded-full animate-eq-1 h-3.5"></span>
+                    <span className="w-1 bg-purple-400 rounded-full animate-eq-2 h-5"></span>
+                    <span className="w-1 bg-purple-400 rounded-full animate-eq-3 h-3"></span>
                   </div>
                 )}
               </div>
 
               <div className="min-w-0">
-                <span className="font-bold text-base text-white block truncate">
+                <span className="font-extrabold text-base sm:text-lg text-white block truncate">
                   {currentSong.title}
                 </span>
-                <span className="text-xs text-purple-300 block truncate">
-                  {currentSong.artist} • {currentSong.album}
+                <span className="text-xs sm:text-sm text-purple-300 font-medium block truncate">
+                  {currentSong.artist} • <span className="text-[#a49bbd]">{currentSong.album}</span>
                 </span>
+                {userQueue.length > 0 && (
+                  <span className="inline-flex items-center gap-1 mt-1 text-[11px] font-bold text-fuchsia-300 bg-fuchsia-950/60 px-2 py-0.5 rounded-full border border-fuchsia-500/30">
+                    <Sparkles className="w-3 h-3" /> {userQueue.length} lagu menanti di antrean
+                  </span>
+                )}
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1 sm:gap-2">
-                <button
-                  onClick={() => openAddToPlaylistModal(currentSong)}
-                  className="p-1 text-[#988fb1] hover:text-purple-300"
-                  title="Tambahkan ke Playlist"
-                >
-                  <ListPlus className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => toggleLike(currentSong)}
-                  className="p-1 text-[#988fb1] hover:text-white"
-                  title={likedSongIds.includes(currentSong.id) ? "Hapus dari Favorit" : "Simpan ke Favorit"}
-                >
-                  <Heart
-                    className={`w-5 h-5 ${
-                      likedSongIds.includes(currentSong.id)
-                        ? "fill-purple-500 text-purple-500"
-                        : ""
-                    }`}
-                  />
-                </button>
-              </div>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <button
+                onClick={() => openAddToPlaylistModal(currentSong)}
+                className="p-2 text-[#a298be] hover:text-purple-300 hover:bg-purple-950/40 rounded-xl transition-all"
+                title="Tambahkan ke Playlist"
+              >
+                <ListPlus className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => toggleLike(currentSong)}
+                className="p-2 text-[#a298be] hover:text-white hover:bg-purple-950/40 rounded-xl transition-all"
+                title={likedSongIds.includes(currentSong.id) ? "Hapus dari Favorit" : "Simpan ke Favorit"}
+              >
+                <Heart
+                  className={`w-5 h-5 ${
+                    likedSongIds.includes(currentSong.id)
+                      ? "fill-purple-500 text-purple-500"
+                      : ""
+                  }`}
+                />
+              </button>
               <button
                 onClick={togglePlay}
-                className="w-10 h-10 rounded-full bg-gradient-to-tr from-purple-600 to-fuchsia-500 text-white flex items-center justify-center purple-glow-sm"
+                className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-gradient-to-tr from-purple-600 to-fuchsia-500 text-white flex items-center justify-center purple-glow-sm hover:scale-105 active:scale-95 transition-all shadow-lg ml-1"
               >
                 {isPlaying ? (
-                  <Pause className="w-4 h-4 fill-white" />
+                  <Pause className="w-5 h-5 fill-white" />
                 ) : (
-                  <Play className="w-4 h-4 fill-white ml-0.5" />
+                  <Play className="w-5 h-5 fill-white ml-0.5" />
                 )}
               </button>
             </div>
           </div>
+        ) : (
+          <div className="py-8 text-center text-sm text-[#877e9f] bg-[#140e2b] rounded-xl border border-[#231945]">
+            Belum ada musik yang sedang diputar.
+          </div>
         )}
       </div>
 
-      {/* Next Up in Queue */}
-      <div>
+      {/* 2. USER MANUAL QUEUE (PRIORITY 1) */}
+      <div className="mb-8">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-xs font-bold text-[#8d84a7] uppercase tracking-wider">
-            Berikutnya dari Daftar Putar ({nextSongs.length})
-          </h2>
-          {nextSongs.length > 0 && (
+          <div className="flex items-center gap-2">
+            <h2 className="text-xs font-extrabold text-white uppercase tracking-wider flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+              Berikutnya Dalam Antrean ({userQueue.length})
+            </h2>
+            <span className="text-[10px] uppercase font-bold text-purple-300 bg-purple-900/50 px-2 py-0.5 rounded-full border border-purple-500/30">
+              Prioritas Utama
+            </span>
+          </div>
+
+          {userQueue.length > 0 && (
             <button
-              onClick={clearQueue}
-              className="text-xs text-[#9d93be] hover:text-white transition-colors"
+              onClick={clearUserQueue}
+              className="text-xs text-[#9d93be] hover:text-red-300 transition-colors"
             >
-              Kosongkan Antrean
+              Hapus Semua
             </button>
           )}
         </div>
 
-        {nextSongs.length === 0 ? (
-          <div className="py-12 text-center text-sm text-[#877e9f] bg-[#140e2b] rounded-xl border border-[#231945]">
-            Tidak ada lagu berikutnya dalam antrean.
+        {userQueue.length === 0 ? (
+          <div className="py-6 px-4 text-center text-xs text-[#877e9f] bg-[#140e2a]/50 rounded-xl border border-dashed border-[#2b204e] flex flex-col items-center justify-center gap-1.5">
+            <Music className="w-5 h-5 text-purple-400/60" />
+            <p className="font-semibold text-[#b3aacd]">Tidak ada lagu dalam antrean manual.</p>
+            <p className="text-[11px] text-[#7d7596]">
+              Klik tombol (+) atau ikon titik tiga pada lagu mana pun untuk memasukkannya ke antrean ini.
+            </p>
           </div>
         ) : (
-          <div className="space-y-1">
-            {nextSongs.map((song, idx) => {
+          <div className="space-y-1.5">
+            {userQueue.map((song, idx) => {
               const isLiked = likedSongIds.includes(song.id);
 
               return (
                 <div
-                  key={`${song.id}-${idx}`}
-                  onClick={() => playSong(song)}
-                  className="flex items-center justify-between p-2.5 rounded-lg bg-[#140e2a]/60 hover:bg-[#20163f] border border-transparent hover:border-purple-500/20 cursor-pointer group transition-all"
+                  key={`user-q-${song.id}-${idx}`}
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-purple-950/20 hover:bg-purple-900/30 border border-purple-500/20 hover:border-purple-500/40 group transition-all"
                 >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span className="w-6 text-center text-xs font-mono text-[#776f8e]">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    {/* Position Number */}
+                    <span className="w-6 text-center text-xs font-mono font-bold text-purple-300">
                       {idx + 1}
                     </span>
+
+                    {/* Album Cover & Play on Click */}
+                    <div
+                      onClick={() => playFromUserQueue(idx)}
+                      className="relative w-10 h-10 rounded-lg overflow-hidden shrink-0 cursor-pointer shadow group/cover"
+                    >
+                      <img
+                        src={song.cover || "/default-cover.svg"}
+                        alt={song.title}
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = "/default-cover.svg";
+                        }}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/cover:opacity-100 flex items-center justify-center transition-opacity">
+                        <Play className="w-4 h-4 fill-white text-white ml-0.5" />
+                      </div>
+                    </div>
+
+                    {/* Title & Artist */}
+                    <div
+                      onClick={() => playFromUserQueue(idx)}
+                      className="min-w-0 cursor-pointer flex-1"
+                    >
+                      <span className="font-bold text-sm text-white group-hover:text-purple-300 block truncate">
+                        {song.title}
+                      </span>
+                      <span className="text-xs text-[#9d94b8] block truncate">
+                        {song.artist} • <span className="text-[#7d7596]">{song.album || "Single"}</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Actions: Reorder, Playlist, Like, Delete */}
+                  <div className="flex items-center gap-1 sm:gap-2 text-xs shrink-0">
+                    {/* Move Up */}
+                    <button
+                      disabled={idx === 0}
+                      onClick={() => moveInUserQueue(idx, idx - 1)}
+                      className={`p-1 rounded hover:bg-purple-900/40 transition-colors ${
+                        idx === 0 ? "text-[#544d6b] cursor-not-allowed" : "text-[#9d94b8] hover:text-white"
+                      }`}
+                      title="Geser ke Atas"
+                    >
+                      <ArrowUp className="w-3.5 h-3.5" />
+                    </button>
+
+                    {/* Move Down */}
+                    <button
+                      disabled={idx === userQueue.length - 1}
+                      onClick={() => moveInUserQueue(idx, idx + 1)}
+                      className={`p-1 rounded hover:bg-purple-900/40 transition-colors ${
+                        idx === userQueue.length - 1
+                          ? "text-[#544d6b] cursor-not-allowed"
+                          : "text-[#9d94b8] hover:text-white"
+                      }`}
+                      title="Geser ke Bawah"
+                    >
+                      <ArrowDown className="w-3.5 h-3.5" />
+                    </button>
+
+                    <button
+                      onClick={() => openAddToPlaylistModal(song)}
+                      className="p-1 text-[#9d94b8] hover:text-purple-300 transition-colors"
+                      title="Tambahkan ke Playlist"
+                    >
+                      <ListPlus className="w-4 h-4" />
+                    </button>
+
+                    <button
+                      onClick={() => toggleLike(song)}
+                      className="p-1 text-[#9d94b8] hover:text-white transition-colors"
+                      title={isLiked ? "Hapus dari Favorit" : "Simpan ke Favorit"}
+                    >
+                      <Heart
+                        className={`w-4 h-4 ${
+                          isLiked ? "fill-purple-500 text-purple-500" : ""
+                        }`}
+                      />
+                    </button>
+
+                    <button
+                      onClick={() => removeFromUserQueue(idx)}
+                      className="p-1 text-[#9d94b8] hover:text-red-400 transition-colors"
+                      title="Hapus dari Antrean"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+
+                    <span className="font-mono text-[#8a81a4] ml-1 hidden sm:inline">
+                      {song.duration || "3:30"}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* 3. CONTEXT UPCOMING TRACKS (PRIORITY 2) */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xs font-bold text-[#8d84a7] uppercase tracking-wider flex items-center gap-1.5">
+            Berikutnya Dari: <span className="text-purple-300 font-extrabold lowercase first-letter:uppercase">{contextSourceTitle}</span> ({contextUpcoming.length})
+          </h2>
+          <span className="text-[11px] text-[#786f91]">
+            {userQueue.length > 0 ? "Diputar setelah antrean manual habis" : "Urutan pemutaran aktif"}
+          </span>
+        </div>
+
+        {contextUpcoming.length === 0 ? (
+          <div className="py-8 text-center text-xs text-[#877e9f] bg-[#140e2b] rounded-xl border border-[#231945]">
+            Tidak ada lagu berikutnya di daftar putar ini.
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {contextUpcoming.map((song, idx) => {
+              const isLiked = likedSongIds.includes(song.id);
+
+              return (
+                <div
+                  key={`context-${song.id}-${idx}`}
+                  onClick={() => playSong(song, currentPlaylist)}
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-[#140e2a]/60 hover:bg-[#20163f] border border-transparent hover:border-purple-500/20 cursor-pointer group transition-all"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="w-6 text-center text-xs font-mono text-[#776f8e] group-hover:hidden">
+                      {idx + 1}
+                    </span>
+                    <div className="w-6 text-center text-xs text-purple-300 hidden group-hover:block">
+                      <Play className="w-3.5 h-3.5 fill-purple-400 mx-auto" />
+                    </div>
 
                     <img
                       src={song.cover || "/default-cover.svg"}
@@ -157,7 +344,7 @@ export default function QueueView() {
                         e.currentTarget.onerror = null;
                         e.currentTarget.src = "/default-cover.svg";
                       }}
-                      className="w-10 h-10 rounded object-cover shrink-0"
+                      className="w-10 h-10 rounded-lg object-cover shrink-0 shadow-sm"
                     />
 
                     <div className="min-w-0">
@@ -176,7 +363,7 @@ export default function QueueView() {
                         e.stopPropagation();
                         openAddToPlaylistModal(song);
                       }}
-                      className="text-[#887f9e] hover:text-purple-300"
+                      className="text-[#887f9e] hover:text-purple-300 p-1"
                       title="Tambahkan ke Playlist"
                     >
                       <ListPlus className="w-4 h-4" />
@@ -186,7 +373,7 @@ export default function QueueView() {
                         e.stopPropagation();
                         toggleLike(song);
                       }}
-                      className="text-[#887f9e] hover:text-white"
+                      className="text-[#887f9e] hover:text-white p-1"
                       title={isLiked ? "Hapus dari Favorit" : "Simpan ke Favorit"}
                     >
                       <Heart
@@ -195,19 +382,8 @@ export default function QueueView() {
                         }`}
                       />
                     </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const realIndex = currentIndex !== -1 ? currentIndex + 1 + idx : idx;
-                        removeFromQueue(realIndex);
-                      }}
-                      className="text-[#887f9e] hover:text-red-400 transition-colors p-1"
-                      title="Hapus dari Antrean"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
                     <span className="font-mono text-[#8a81a4]">
-                      {song.duration}
+                      {song.duration || "3:30"}
                     </span>
                   </div>
                 </div>

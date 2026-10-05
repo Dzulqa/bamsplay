@@ -1,4 +1,5 @@
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -11,12 +12,15 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+export const viewport = {
+  themeColor: "#7c3aed",
+};
+
 export const metadata = {
   title: "Bamsplay - Web Player: Music for everyone",
   description:
     "Bamsplay is a modern, Spotify-inspired web music player with an elegant purple theme.",
   manifest: "/manifest.json",
-  themeColor: "#7c3aed",
   appleWebApp: {
     capable: true,
     title: "Bamsplay",
@@ -49,22 +53,39 @@ export const metadata = {
   },
 };
 
-// Registers the service worker for PWA offline support
+// Clean up Service Worker on localhost, register only on production
 function ServiceWorkerRegistration() {
   return (
     <script
       dangerouslySetInnerHTML={{
         __html: `
-          if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-              navigator.serviceWorker.register('/sw.js')
-                .then(function(reg) {
-                  console.log('[Bamsplay] SW registered:', reg.scope);
-                })
-                .catch(function(err) {
-                  console.warn('[Bamsplay] SW registration failed:', err);
+          if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            if (isLocal) {
+              // Unregister any active service worker on localhost & clear cache
+              navigator.serviceWorker.getRegistrations().then(function(regs) {
+                for (let reg of regs) {
+                  reg.unregister();
+                }
+              });
+              if ('caches' in window) {
+                caches.keys().then(function(keys) {
+                  for (let key of keys) {
+                    caches.delete(key);
+                  }
                 });
-            });
+              }
+            } else {
+              window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js')
+                  .then(function(reg) {
+                    console.log('[Bamsplay] SW registered:', reg.scope);
+                  })
+                  .catch(function(err) {
+                    console.warn('[Bamsplay] SW registration failed:', err);
+                  });
+              });
+            }
           }
         `,
       }}
@@ -79,6 +100,7 @@ export default function RootLayout({ children }) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
     >
       <body className="min-h-full h-full flex flex-col bg-[#0b0813] text-[#e2dfeb] selection:bg-purple-600 selection:text-white font-sans overflow-hidden">
+        <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
         <ServiceWorkerRegistration />
         {children}
       </body>

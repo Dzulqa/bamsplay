@@ -36,7 +36,7 @@ export default function DeviceModal() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-150">
-      <div className="bg-[#17102e] border border-purple-500/30 rounded-2xl w-full max-w-sm p-5 shadow-2xl space-y-4">
+      <div className="bg-[#17102e] border border-white/10 rounded-xl w-full max-w-sm p-5 shadow-2xl space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-[#2d2252]">
           <div className="flex items-center gap-2">
             <Wifi className="w-5 h-5 text-purple-400" />
@@ -67,7 +67,7 @@ export default function DeviceModal() {
                     "purple"
                   );
                 }}
-                className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${
+                className={`flex items-center justify-between p-3 rounded-md cursor-pointer transition-colors ${
                   isSelected
                     ? "bg-purple-900/40 border border-purple-500/40 text-purple-200"
                     : "bg-[#120a22] hover:bg-[#1e143b] text-[#b3abc9]"
@@ -75,7 +75,7 @@ export default function DeviceModal() {
               >
                 <div className="flex items-center gap-3">
                   <div
-                    className={`w-9 h-9 rounded-lg flex items-center justify-center ${
+                    className={`w-9 h-9 rounded-md flex items-center justify-center ${
                       isSelected
                         ? "bg-purple-600 text-white"
                         : "bg-[#21163e] text-[#8e85aa]"

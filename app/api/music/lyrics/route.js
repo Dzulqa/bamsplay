@@ -147,13 +147,58 @@ export async function GET(request) {
     return NextResponse.json({ lyrics: [] }, { status: 400 });
   }
 
-  const cacheKey = `${rawTitle.toLowerCase()}---${rawArtist.toLowerCase()}`;
+  const cacheKey = `${rawTitle.toLowerCase().trim()}---${rawArtist.toLowerCase().trim()}`;
   if (lyricsCache.has(cacheKey)) {
     return NextResponse.json(lyricsCache.get(cacheKey));
   }
 
   const t = cleanTitle(rawTitle);
   const a = cleanArtist(rawArtist);
+
+  // Curated override for Bernadya - Satu Bulan (Synced with instant-start YouTube video)
+  if (
+    (t.toLowerCase().includes("satu bulan") || rawTitle.toLowerCase().includes("satu bulan")) &&
+    (a.toLowerCase().includes("bernadya") || rawArtist.toLowerCase().includes("bernadya"))
+  ) {
+    const curatedSatuBulan = {
+      lyrics: [
+        { time: 0.5, text: "Belum ada satu bulan" },
+        { time: 5.6, text: "Ku yakin masih ada sisa wangiku di bajumu" },
+        { time: 11.7, text: "Namun kau tampak baik saja" },
+        { time: 15.7, text: "Bahkan senyummu lebih lepas" },
+        { time: 18.5, text: "Sedang aku di sini hampir gila" },
+        { time: 24.3, text: "Kita tak temukan jalan" },
+        { time: 29.9, text: "Sepakat akhiri setelah beribu debat panjang" },
+        { time: 36.2, text: "Namun kau tampak baik saja" },
+        { time: 40.8, text: "Bahkan senyummu lebih lepas" },
+        { time: 43.1, text: "Sedang aku di sini belum terima" },
+        { time: 48.9, text: "Bohong kah tangismu sore itu di pelukku?" },
+        { time: 54.8, text: "Nyatanya pergi ku pun tak lagi mengangganggumu" },
+        { time: 59.9, text: "Apa sudah ada kabar lain yang kau tunggu?" },
+        { time: 65.1, text: "Sudah adakah yang gantikanku?" },
+        { time: 70.4, text: "Yang khawatirkanmu setiap waktu?" },
+        { time: 76.5, text: "Yang cerita tentang apapun sampai hal-hal tak perlu?" },
+        { time: 82.4, text: "Kalau bisa jangan buru-buru, kalau bisa jangan ada dulu" },
+        { time: 96.7, text: "Baru lewat satu bulan" },
+        { time: 108.8, text: "Kemarin ulang tahunku tak ada pesan darimu" },
+        { time: 114.5, text: "Tak apa, mungkin kau lupa" },
+        { time: 119.2, text: "Atau sudah ada hati yang harus kau jaga?" },
+        { time: 125.2, text: "Sudah adakah yang gantikanku?" },
+        { time: 129.9, text: "Yang kau antar jemput setiap sabtu?" },
+        { time: 135.4, text: "Yang s'lalu ingatkan untuk pakai sabuk pengamanmu" },
+        { time: 141.3, text: "Kalau bisa jangan buru-buru" },
+        { time: 146.2, text: "Sudah adakah yang gantikanku?" },
+        { time: 151.4, text: "Yang khawatirkanmu setiap waktu" },
+        { time: 157.1, text: "Yang cerita tentang apapun sampai hal-hal tak perlu" },
+        { time: 163.0, text: "Kalau bisa jangan buru-buru, kalau bisa jangan ada dulu" },
+        { time: 182.7, text: "Huuu" },
+      ],
+      isSynced: true,
+      source: "curated_studio_synced",
+    };
+    lyricsCache.set(cacheKey, curatedSatuBulan);
+    return NextResponse.json(curatedSatuBulan);
+  }
 
   // 8-strategy cascade — stops as soon as synced LRC is found
   const strategies = [

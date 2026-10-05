@@ -1,0 +1,25 @@
+{
+  "user": {
+    "email": "hilbraminformatika@gmail.com",
+    "name": "Dzulqa_i",
+    "avatar": "https://lh3.googleusercontent.com/a/ACg8ocIj-2dhZB3tYo4yIrXWUyjJqBXO7eSd2mtj3-20AqitGiwFpis=s96-c",
+    "provider": "google"
+  },
+  "playlists": [
+    {
+      "id": "liked-songs",
+      "title": "Lagu Favorit",
+      "subtitle": "Koleksi yang Disukai",
+      "type": "Koleksi",
+      "creator": "Bams",
+      "totalSongs": 0,
+      "duration": "0 min",
+      "cover": "linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #4c1d95 100%)",
+      "isLikedPlaylist": true,
+      "description": "Semua lagu favorit yang telah kamu tandai dengan hati di Bamsplay.",
+      "songIds": []
+    }
+  ],
+  "likedSongIds": [],
+  "updatedAt": "2026-10-05T14:30:46.857Z"
+}

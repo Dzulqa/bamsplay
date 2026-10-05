@@ -18,6 +18,7 @@ import {
   CheckCircle2,
   ListPlus,
   ListMusic,
+  ArrowDownToLine,
 } from "lucide-react";
 
 export default function SearchView() {
@@ -32,6 +33,10 @@ export default function SearchView() {
     togglePlay,
     likedSongIds,
     toggleLike,
+    downloadedSongIds,
+    downloadingMap,
+    downloadSong,
+    removeDownloadedSong,
     navigateTo,
     addToQueue,
     openAddToPlaylistModal,
@@ -97,12 +102,12 @@ export default function SearchView() {
   // Local song matches for instant 0ms response
   const localMatches = query
     ? songs.filter(
-        (s) =>
-          s.title.toLowerCase().includes(query) ||
-          s.artist.toLowerCase().includes(query) ||
-          s.album?.toLowerCase().includes(query) ||
-          s.genre?.toLowerCase().includes(query)
-      )
+      (s) =>
+        s.title.toLowerCase().includes(query) ||
+        s.artist.toLowerCase().includes(query) ||
+        s.album?.toLowerCase().includes(query) ||
+        s.genre?.toLowerCase().includes(query)
+    )
     : [];
 
   const matchedPlaylists = query
@@ -156,16 +161,21 @@ export default function SearchView() {
     const seen = new Set();
     const result = [];
 
+    const getNormKey = (s) =>
+      (s.title || "").toLowerCase().replace(/[^a-z0-9]/g, "") +
+      "---" +
+      (s.artist || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
     // Prioritize curated/local matches first
     for (const song of localMatches) {
-      const key = `${song.title.toLowerCase()}-${song.artist.toLowerCase()}`;
+      const key = getNormKey(song);
       seen.add(key);
       result.push(song);
     }
 
     // Then append global 100M+ catalog matches
     for (const song of globalSongs) {
-      const key = `${song.title.toLowerCase()}-${song.artist.toLowerCase()}`;
+      const key = getNormKey(song);
       if (!seen.has(key)) {
         seen.add(key);
         result.push(song);
@@ -252,10 +262,10 @@ export default function SearchView() {
                     </h2>
 
                     <div
-                      onClick={() => playSong(topResult)}
-                      className="group p-5 bg-gradient-to-b from-[#1b1035] to-[#120a24] hover:from-[#241547] hover:to-[#170c2e] rounded-2xl transition-all duration-300 cursor-pointer border border-purple-500/25 hover:border-purple-500/40 relative shadow-xl flex flex-col justify-between min-h-[220px]"
+                      onClick={() => playSong(topResult, null, combinedSongs)}
+                      className="group p-5 bg-gradient-to-b from-[#1b1035] to-[#120a24] hover:from-[#241547] hover:to-[#170c2e] rounded-xl transition-all duration-300 cursor-pointer border border-purple-500/20 hover:border-purple-500/30 relative shadow-xl flex flex-col justify-between min-h-[220px]"
                     >
-                      <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden shadow-lg border border-purple-500/20">
+                      <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-md overflow-hidden shadow-lg border border-white/10">
                         <img
                           src={topResult.cover}
                           alt={topResult.title}
@@ -297,7 +307,7 @@ export default function SearchView() {
                         onClick={(e) => {
                           e.stopPropagation();
                           if (currentSong?.id === topResult.id) togglePlay();
-                          else playSong(topResult);
+                          else playSong(topResult, null, combinedSongs);
                         }}
                         className="absolute bottom-5 right-5 w-12 h-12 rounded-full bg-gradient-to-tr from-purple-600 to-fuchsia-600 hover:from-purple-500 hover:to-fuchsia-500 text-white flex items-center justify-center purple-glow-sm shadow-2xl opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-110 active:scale-95 transition-all"
                         title={isPlaying && currentSong?.id === topResult.id ? "Jeda" : "Putar"}
@@ -329,16 +339,17 @@ export default function SearchView() {
                       const isThisPlaying =
                         isPlaying && currentSong?.id === song.id;
                       const isLiked = likedSongIds.includes(song.id);
+                      const isSongDl = downloadedSongIds?.includes(song.id);
+                      const isSongDling = !!downloadingMap?.[song.id];
 
                       return (
                         <div
                           key={song.id || idx}
-                          onClick={() => playSong(song)}
-                          className={`flex items-center justify-between p-2.5 rounded-xl cursor-pointer group transition-all border ${
-                            isThisPlaying
-                              ? "bg-purple-950/60 border-purple-500/40 text-purple-300 shadow-md"
-                              : "bg-[#140b28]/40 hover:bg-[#1f123d] border-transparent hover:border-purple-500/20 text-[#cdc7e0]"
-                          }`}
+                          onClick={() => playSong(song, null, combinedSongs)}
+                          className={`flex items-center justify-between p-2.5 rounded-xl cursor-pointer group transition-all border ${isThisPlaying
+                            ? "bg-purple-950/60 border-purple-500/40 text-purple-300 shadow-md"
+                            : "bg-[#140b28]/40 hover:bg-[#1f123d] border-transparent hover:border-purple-500/20 text-[#cdc7e0]"
+                            }`}
                         >
                           <div className="flex items-center gap-3 min-w-0 flex-1 pr-3">
                             <span className="w-5 text-center text-xs font-mono text-[#7b7296] shrink-0">
@@ -369,11 +380,10 @@ export default function SearchView() {
 
                             <div className="min-w-0 flex-1">
                               <div
-                                className={`font-bold text-xs sm:text-sm truncate ${
-                                  isThisPlaying
-                                    ? "text-purple-300 font-extrabold"
-                                    : "text-white group-hover:text-purple-200"
-                                }`}
+                                className={`font-bold text-xs sm:text-sm truncate ${isThisPlaying
+                                  ? "text-purple-300 font-extrabold"
+                                  : "text-white group-hover:text-purple-200"
+                                  }`}
                               >
                                 {song.title}
                               </div>
@@ -426,13 +436,44 @@ export default function SearchView() {
                               title={isLiked ? "Hapus dari Favorit" : "Simpan ke Favorit"}
                             >
                               <Heart
-                                className={`w-4 h-4 ${
-                                  isLiked
-                                    ? "fill-purple-500 text-purple-500"
-                                    : ""
-                                }`}
+                                className={`w-4 h-4 ${isLiked
+                                  ? "fill-purple-500 text-purple-500"
+                                  : ""
+                                  }`}
                               />
                             </button>
+
+                            {/* Download button */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (isSongDl) removeDownloadedSong(song.id);
+                                else downloadSong(song);
+                              }}
+                              className={`p-1.5 transition-colors ${
+                                isSongDl
+                                  ? "text-emerald-400"
+                                  : isSongDling
+                                  ? "text-purple-400"
+                                  : "text-[#958dae] hover:text-white"
+                              }`}
+                              title={
+                                isSongDl
+                                  ? "Lagu terunduh (Klik untuk hapus dari offline)"
+                                  : isSongDling
+                                  ? "Sedang mengunduh lagu..."
+                                  : "Unduh untuk putar offline"
+                              }
+                            >
+                              {isSongDling ? (
+                                <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
+                              ) : isSongDl ? (
+                                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                              ) : (
+                                <ArrowDownToLine className="w-4 h-4" />
+                              )}
+                            </button>
+
                             <span className="font-mono text-[#8a81a6] text-[11px] w-9 text-right">
                               {song.duration}
                             </span>
@@ -493,7 +534,7 @@ export default function SearchView() {
         /* 2. When Search Bar is Empty (Browse Canvas for 100M+ Songs) */
         <div className="space-y-8 animate-in fade-in duration-300">
           {/* Global Catalog Hero Banner */}
-          <div className="relative rounded-3xl p-6 sm:p-8 overflow-hidden bg-gradient-to-r from-[#21113e] via-[#160a2b] to-[#0d061c] border border-purple-500/25 shadow-2xl">
+          <div className="relative rounded-xl p-6 sm:p-8 overflow-hidden bg-gradient-to-r from-[#21113e] via-[#160a2b] to-[#0d061c] border border-purple-500/25 shadow-2xl">
             <div className="absolute top-0 right-0 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
 
             <div className="relative z-10 max-w-2xl">
@@ -555,11 +596,10 @@ export default function SearchView() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveExploreTab(tab.id)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                      activeExploreTab === tab.id
-                        ? "bg-purple-600 text-white shadow-md shadow-purple-900/40 scale-105"
-                        : "bg-[#181130] text-[#a9a1c2] hover:bg-[#231a44] hover:text-white border border-purple-500/15"
-                    }`}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${activeExploreTab === tab.id
+                      ? "bg-purple-600 text-white shadow-md shadow-purple-900/40 scale-105"
+                      : "bg-[#181130] text-[#a9a1c2] hover:bg-[#231a44] hover:text-white border border-purple-500/15"
+                      }`}
                   >
                     {tab.label}
                   </button>
@@ -576,10 +616,10 @@ export default function SearchView() {
                 return (
                   <div
                     key={song.id}
-                    onClick={() => playSong(song)}
-                    className="group p-3.5 bg-[#140d29]/80 hover:bg-[#1f153d] rounded-2xl transition-all duration-200 cursor-pointer border border-purple-500/10 hover:border-purple-500/30 flex flex-col relative shadow-sm"
+                    onClick={() => playSong(song, null, exploreSongs)}
+                    className="group p-3 sm:p-3.5 bg-[#140d29]/70 hover:bg-[#1f153d] rounded-md sm:rounded-lg transition-all duration-200 cursor-pointer border border-transparent hover:border-white/5 flex flex-col relative shadow-sm"
                   >
-                    <div className="relative aspect-square w-full rounded-xl overflow-hidden mb-3 shadow-md">
+                    <div className="relative aspect-square w-full rounded-md overflow-hidden mb-3 shadow-md bg-[#0a0515]">
                       <img
                         src={song.cover}
                         alt={song.title}
@@ -631,15 +671,13 @@ export default function SearchView() {
                             e.stopPropagation();
                             toggleLike(song);
                           }}
-                          className={`w-7 h-7 rounded-full bg-black/70 hover:bg-black/90 flex items-center justify-center backdrop-blur-md shadow-md transition-all active:scale-90 ${
-                            isLiked ? "text-purple-400" : "text-white"
-                          }`}
+                          className={`w-7 h-7 rounded-full bg-black/70 hover:bg-black/90 flex items-center justify-center backdrop-blur-md shadow-md transition-all active:scale-90 ${isLiked ? "text-purple-400" : "text-white"
+                            }`}
                           title={isLiked ? "Hapus dari Favorit" : "Simpan ke Favorit"}
                         >
                           <Heart
-                            className={`w-3.5 h-3.5 ${
-                              isLiked ? "fill-purple-500 text-purple-500" : ""
-                            }`}
+                            className={`w-3.5 h-3.5 ${isLiked ? "fill-purple-500 text-purple-500" : ""
+                              }`}
                           />
                         </button>
                       </div>
@@ -649,13 +687,12 @@ export default function SearchView() {
                         onClick={(e) => {
                           e.stopPropagation();
                           if (isThisPlaying) togglePlay();
-                          else playSong(song);
+                          else playSong(song, null, exploreSongs);
                         }}
-                        className={`absolute bottom-2.5 right-2.5 w-10 h-10 rounded-full bg-purple-600 hover:bg-purple-500 text-white flex items-center justify-center purple-glow-sm shadow-xl transition-all z-20 ${
-                          isThisPlaying
-                            ? "opacity-100 scale-100"
-                            : "opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-105"
-                        }`}
+                        className={`absolute bottom-2.5 right-2.5 w-10 h-10 rounded-full bg-purple-600 hover:bg-purple-500 text-white flex items-center justify-center purple-glow-sm shadow-xl transition-all z-20 ${isThisPlaying
+                          ? "opacity-100 scale-100"
+                          : "opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-105"
+                          }`}
                       >
                         {isThisPlaying ? (
                           <Pause className="w-4 h-4 fill-white" />
@@ -701,13 +738,13 @@ export default function SearchView() {
                 <div
                   key={category.id}
                   onClick={() => setSearchQuery(category.name)}
-                  className={`relative h-28 sm:h-36 md:h-40 rounded-2xl p-3 sm:p-4 overflow-hidden cursor-pointer shadow-lg bg-gradient-to-br ${category.color} border border-purple-500/20 hover:scale-[1.03] transition-all duration-200 select-none group`}
+                  className={`relative h-28 sm:h-36 md:h-40 rounded-lg p-3 sm:p-4 overflow-hidden cursor-pointer shadow-lg bg-gradient-to-br ${category.color} border border-white/10 hover:scale-[1.02] transition-all duration-200 select-none group`}
                 >
                   <h3 className="font-extrabold text-sm sm:text-base md:text-lg text-white max-w-[85%] leading-tight drop-shadow-sm">
                     {category.name}
                   </h3>
 
-                  <div className="absolute -bottom-2 -right-2 w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-xl overflow-hidden shadow-2xl rotate-[25deg] group-hover:rotate-[28deg] group-hover:scale-110 transition-all duration-300 border border-white/10">
+                  <div className="absolute -bottom-2 -right-2 w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-md overflow-hidden shadow-2xl rotate-[25deg] group-hover:rotate-[28deg] group-hover:scale-105 transition-all duration-300 border border-white/10">
                     <img
                       src={category.iconCover}
                       alt={category.name}
@@ -745,7 +782,7 @@ export default function SearchView() {
                       },
                     })
                   }
-                  className="group p-3 bg-[#140d29]/60 hover:bg-[#1f153d] rounded-2xl transition-all cursor-pointer border border-purple-500/10 hover:border-purple-500/30 flex flex-col items-center text-center"
+                  className="group p-3 bg-[#140d29]/60 hover:bg-[#1f153d] rounded-md sm:rounded-lg transition-all cursor-pointer border border-transparent hover:border-white/5 flex flex-col items-center text-center"
                 >
                   <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-full overflow-hidden mb-2 shadow-md">
                     <img

@@ -9,6 +9,7 @@ import PlaylistView from "./PlaylistView";
 import ArtistView from "./ArtistView";
 import LyricsView from "./LyricsView";
 import QueueView from "./QueueView";
+import DownloadedView from "./DownloadedView";
 
 export default function MainContent() {
   const { activeView, currentSong } = useAudio();
@@ -21,7 +22,7 @@ export default function MainContent() {
   }, [activeView]); // scroll ke atas hanya saat pindah view, bukan saat ganti lagu
 
   return (
-    <main className="flex-1 h-full min-w-0 bg-[#090514] flex flex-col overflow-hidden relative">
+    <main className="flex-1 h-full min-w-0 bg-gradient-to-b from-[#150a2e]/60 via-[#0a0515] to-[#080410] flex flex-col overflow-hidden relative">
       <TopNav />
 
       <div
@@ -29,7 +30,7 @@ export default function MainContent() {
         className={`flex-1 relative ${
           activeView === "lyrics"
             ? "overflow-hidden p-0"
-            : "overflow-y-auto custom-scrollbar px-4 sm:px-8 lg:px-10 py-6"
+            : "overflow-y-auto custom-scrollbar px-4 sm:px-6 lg:px-8 py-6"
         }`}
       >
         {activeView === "home" && <HomeView />}
@@ -38,6 +39,7 @@ export default function MainContent() {
         {activeView === "artist" && <ArtistView />}
         {activeView === "lyrics" && <LyricsView />}
         {activeView === "queue" && <QueueView />}
+        {activeView === "downloaded" && <DownloadedView />}
       </div>
     </main>
   );

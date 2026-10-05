@@ -12,6 +12,9 @@ import {
   ListPlus,
   ListMusic,
   Music,
+  ArrowDownToLine,
+  CheckCircle2,
+  Loader2,
 } from "lucide-react";
 import { initialSongs, topArtists } from "@/data/musicData";
 
@@ -25,12 +28,22 @@ export default function HomeView() {
     togglePlay,
     likedSongIds,
     toggleLike,
+    downloadedSongIds,
+    downloadingMap,
+    downloadSong,
+    removeDownloadedSong,
     navigateTo,
     addToQueue,
     openAddToPlaylistModal,
+    isSidebarCollapsed,
   } = useAudio();
 
   const [selectedVibe, setSelectedVibe] = useState("all");
+
+  // Dynamic grid columns: 3 columns when both sidebars are open, 4 columns when left sidebar is collapsed
+  const songGridCols = isSidebarCollapsed
+    ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-3 sm:gap-4"
+    : "grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-3 gap-3 sm:gap-4";
 
   // Spotlight follows the currently playing song; falls back to first curated song
   const spotlightSong = currentSong || songs[0] || initialSongs[0];
@@ -52,16 +65,16 @@ export default function HomeView() {
   ];
 
   return (
-    <div className="relative pb-24 md:pb-16 select-none space-y-8 max-w-7xl mx-auto">
+    <div className="relative pb-32 md:pb-16 select-none space-y-6 sm:space-y-8 max-w-7xl mx-auto">
       {/* 1. BAMSPLAY SIGNATURE SPOTLIGHT HERO BANNER — follows currently playing song */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#1c113b] via-[#160d2e] to-[#0d071d] border border-purple-500/20 p-6 sm:p-8 shadow-2xl">
+      <div className="relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-r from-[#1c113b] via-[#160d2e] to-[#0d071d] border border-purple-500/20 p-4 sm:p-7 shadow-2xl">
         {/* Ambient atmospheric aura */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-purple-600/15 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
 
-        <div key={spotlightSong?.id} className="relative z-10 flex flex-col md:flex-row items-center md:items-center justify-between gap-6 animate-fadeIn">
+        <div key={spotlightSong?.id} className="relative z-10 flex flex-col md:flex-row items-center md:items-center justify-between gap-5 sm:gap-6 animate-fadeIn">
           {/* Left Info & Actions */}
-          <div className="flex-1 space-y-3 text-center md:text-left">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 text-xs font-bold tracking-wide">
+          <div className="flex-1 space-y-2.5 sm:space-y-3 text-center md:text-left min-w-0">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 text-[11px] sm:text-xs font-bold tracking-wide">
               {currentSong ? (
                 <>
                   <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
@@ -75,11 +88,11 @@ export default function HomeView() {
               )}
             </div>
 
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-black text-white tracking-tight leading-tight line-clamp-2">
               {spotlightSong.title}
             </h1>
 
-            <p className="text-sm sm:text-base text-purple-200/80 font-medium">
+            <p className="text-xs sm:text-base text-purple-200/80 font-medium">
               {spotlightSong.artist} •{" "}
               <span className="text-purple-300/60">{spotlightSong.album}</span>
             </p>
@@ -91,13 +104,13 @@ export default function HomeView() {
             </p>
 
             {/* Banner Buttons */}
-            <div className="flex items-center justify-center md:justify-start gap-4 pt-2">
+            <div className="flex items-center justify-center md:justify-start gap-3 pt-1">
               <button
                 onClick={() => {
                   if (isSpotlightPlaying) togglePlay();
-                  else playSong(spotlightSong);
+                  else playSong(spotlightSong, null, filteredSongs);
                 }}
-                className="flex items-center gap-2.5 px-6 py-3 rounded-full bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-500 hover:to-fuchsia-500 text-white font-bold text-sm purple-glow-sm shadow-xl hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                className="flex items-center gap-2 px-5 py-2.5 sm:px-6 sm:py-3 rounded-full bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-500 hover:to-fuchsia-500 text-white font-bold text-xs sm:text-sm purple-glow-sm shadow-xl hover:scale-105 active:scale-95 transition-all cursor-pointer"
               >
                 {isSpotlightPlaying ? (
                   <>
@@ -135,12 +148,44 @@ export default function HomeView() {
               >
                 <ListPlus className="w-5 h-5" />
               </button>
+
+              <button
+                onClick={() => {
+                  if (downloadedSongIds?.includes(spotlightSong.id)) {
+                    removeDownloadedSong(spotlightSong.id);
+                  } else {
+                    downloadSong(spotlightSong);
+                  }
+                }}
+                className={`p-3 rounded-full border transition-all ${
+                  downloadedSongIds?.includes(spotlightSong.id)
+                    ? "bg-emerald-950/60 border-emerald-500 text-emerald-400 shadow-md shadow-emerald-500/20"
+                    : downloadingMap?.[spotlightSong.id]
+                    ? "bg-purple-900/30 border-purple-400 text-purple-300"
+                    : "border-purple-500/30 text-white/80 hover:text-white hover:border-purple-400 hover:bg-purple-900/20"
+                }`}
+                title={
+                  downloadedSongIds?.includes(spotlightSong.id)
+                    ? "Lagu spotlight terunduh offline (Klik untuk hapus)"
+                    : downloadingMap?.[spotlightSong.id]
+                    ? "Sedang mengunduh..."
+                    : "Unduh Lagu Offline"
+                }
+              >
+                {downloadingMap?.[spotlightSong.id] ? (
+                  <Loader2 className="w-5 h-5 animate-spin text-purple-400" />
+                ) : downloadedSongIds?.includes(spotlightSong.id) ? (
+                  <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                ) : (
+                  <ArrowDownToLine className="w-5 h-5" />
+                )}
+              </button>
             </div>
           </div>
 
           {/* Right: Cover Art with Bamsplay Waveform Aura */}
           <div className="relative shrink-0 flex items-center justify-center">
-            <div className="w-44 h-44 sm:w-56 sm:h-56 rounded-2xl overflow-hidden shadow-2xl border border-purple-500/30 group">
+            <div className="w-36 h-36 sm:w-52 sm:h-52 md:w-56 md:h-56 rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl border border-purple-500/30 group">
               <img
                 src={spotlightSong.cover}
                 alt={spotlightSong.title}
@@ -219,17 +264,17 @@ export default function HomeView() {
           </button>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-4">
+        <div className={`grid ${songGridCols}`}>
           {filteredSongs.map((song) => {
             const isThisPlaying = isPlaying && currentSong?.id === song.id;
 
             return (
               <div
                 key={song.id}
-                onClick={() => playSong(song)}
-                className="group p-3.5 bg-[#140d29]/80 hover:bg-[#1f153d] rounded-2xl transition-all duration-200 cursor-pointer border border-purple-500/10 hover:border-purple-500/30 flex flex-col relative shadow-sm"
+                onClick={() => playSong(song, null, filteredSongs)}
+                className="group p-2.5 sm:p-3.5 bg-[#140d29]/80 hover:bg-[#1f153d] rounded-xl sm:rounded-2xl transition-all duration-200 cursor-pointer border border-purple-500/10 hover:border-purple-500/30 flex flex-col relative shadow-sm"
               >
-                <div className="relative aspect-square w-full rounded-xl overflow-hidden mb-3 shadow-md">
+                <div className="relative aspect-square w-full rounded-lg sm:rounded-xl overflow-hidden mb-2.5 sm:mb-3 shadow-md">
                   <img
                     src={song.cover}
                     alt={song.title}
@@ -279,6 +324,40 @@ export default function HomeView() {
                           likedSongIds.includes(song.id) ? "fill-purple-500 text-purple-500" : ""
                         }`}
                       />
+                    </button>
+
+                    {/* Download Button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (downloadedSongIds?.includes(song.id)) {
+                          removeDownloadedSong(song.id);
+                        } else {
+                          downloadSong(song);
+                        }
+                      }}
+                      className={`w-7 h-7 rounded-full bg-black/70 hover:bg-black/90 flex items-center justify-center backdrop-blur-md shadow-md transition-all active:scale-90 ${
+                        downloadedSongIds?.includes(song.id)
+                          ? "text-emerald-400"
+                          : downloadingMap?.[song.id]
+                          ? "text-purple-400"
+                          : "text-white"
+                      }`}
+                      title={
+                        downloadedSongIds?.includes(song.id)
+                          ? "Lagu terunduh offline (Klik untuk hapus)"
+                          : downloadingMap?.[song.id]
+                          ? "Sedang mengunduh..."
+                          : "Unduh Lagu Offline"
+                      }
+                    >
+                      {downloadingMap?.[song.id] ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : downloadedSongIds?.includes(song.id) ? (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                      ) : (
+                        <ArrowDownToLine className="w-3.5 h-3.5" />
+                      )}
                     </button>
                   </div>
 
@@ -337,7 +416,7 @@ export default function HomeView() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-4">
+          <div className={`grid ${songGridCols}`}>
             {playlists
               .filter((p) => p.id !== "liked-songs")
               .slice(0, 4)

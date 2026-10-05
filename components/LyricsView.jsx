@@ -2,10 +2,19 @@
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useAudio } from "@/context/AudioContext";
-import { Mic2, Loader2, ArrowDown } from "lucide-react";
+import { Mic2, Loader2, ArrowDown, Play, Pause, Heart } from "lucide-react";
 
 export default function LyricsView() {
-  const { currentSong, currentTime, seek, updateSongLyrics } = useAudio();
+  const {
+    currentSong,
+    currentTime,
+    seek,
+    updateSongLyrics,
+    isPlaying,
+    togglePlay,
+    toggleLike,
+    likedSongIds,
+  } = useAudio();
   const [isLoadingLyrics, setIsLoadingLyrics] = useState(false);
   const [isUserScrolledAway, setIsUserScrolledAway] = useState(false);
   const activeLineRef = useRef(null);
@@ -26,24 +35,22 @@ export default function LyricsView() {
     }
   };
 
-  // When song changes (e.g. previous track ended and next track started):
-  // IMMEDIATELY reset lyrics view to the very top so the user never has to scroll up manually!
+  // When song changes: IMMEDIATELY reset lyrics view to the top
   useEffect(() => {
     scrollToTop(false);
   }, [currentSong?.id]);
 
-  // When the current song finishes and loops or restarts from beginning:
+  // When track loops back:
   useEffect(() => {
     const prevTime = prevTimeRef.current;
     prevTimeRef.current = currentTime;
 
-    // Track looped back from near-end to start (e.g. repeat-one mode or replayed track)
     if (prevTime > 6 && currentTime < 2) {
       scrollToTop(true);
     }
   }, [currentTime]);
 
-  // Clean lyric lines: filter out any musical/sound annotations like ♪ (intro...) ♪ or (Instrumental)
+  // Clean lyric lines
   const cleanLyrics = useMemo(() => {
     return (currentSong?.lyrics || []).filter((l) => {
       if (!l?.text) return false;
@@ -108,22 +115,16 @@ export default function LyricsView() {
     }
   }, [currentSong?.id, needsFetch]);
 
-  // Pure, authentic lyric synchronization:
-  // Evaluates strictly against true track timestamps.
-  // Stays steady on the current line and never jumps erratically during instrumental solos.
-  // For unsynced (plain) lyrics that have approximate timestamps, still tries to scroll.
+  // Active lyric line index
   const activeIndex = useMemo(() => {
     if (!cleanLyrics || cleanLyrics.length === 0) return -1;
 
-    // Check if lyrics have no time info at all
     const hasAnyTime = cleanLyrics.some((l) => typeof l?.time === "number" && !isNaN(l.time));
     if (!hasAnyTime) return -1;
 
-    // Use song's specific offset if specified (e.g. video intro compensation), default 0
     const offset = Number(currentSong?.lyricsOffset) || 0;
     const t = Math.max(0, currentTime - offset);
 
-    // If before first lyric line starts
     const firstTime = typeof cleanLyrics[0]?.time === "number"
       ? cleanLyrics[0].time
       : parseFloat(cleanLyrics[0]?.time);
@@ -140,10 +141,8 @@ export default function LyricsView() {
     return -1;
   }, [cleanLyrics, currentTime, currentSong?.lyricsOffset]);
 
-  // Whether lyrics are unsynced (approximate scroll only)
   const isUnsyncedLyrics = cleanLyrics.length > 0 && cleanLyrics.some((l) => l?.isUnsynced);
 
-  // Real user interaction detection (wheel / touch) so programmatic scrolling never blocks auto-scroll
   const handleUserInteraction = () => {
     setIsUserScrolledAway(true);
     clearTimeout(scrollTimeoutRef.current);
@@ -186,41 +185,125 @@ export default function LyricsView() {
     }
   }, [activeIndex, isUserScrolledAway]);
 
+  const isLiked = currentSong ? likedSongIds.includes(currentSong.id) : false;
+
   return (
     <div
       ref={containerRef}
       onWheel={handleUserInteraction}
       onTouchMove={handleUserInteraction}
-      className="relative h-full pb-36 pt-6 sm:pt-8 px-6 sm:px-12 select-none overflow-y-auto custom-scrollbar scroll-smooth bg-gradient-to-b from-[#1b102e] via-[#120b20] to-[#0c0716]"
+      className="relative h-full pb-36 pt-6 sm:pt-8 px-6 sm:px-12 select-none overflow-y-auto custom-scrollbar scroll-smooth bg-gradient-to-b from-[#180e2b] via-[#10081e] to-[#090512]"
     >
-      {/* Header - Spotify Style */}
-      <div className="flex items-center justify-between pb-6 mb-6 border-b border-white/10 max-w-4xl">
-        <div className="flex items-center gap-4">
-          <img
-            src={currentSong?.cover || "/default-cover.svg"}
-            alt={currentSong?.title}
-            onError={(e) => {
-              e.currentTarget.onerror = null;
-              e.currentTarget.src = "/default-cover.svg";
-            }}
-            className="w-14 h-14 rounded-lg object-cover shadow-md shrink-0"
-          />
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-              {currentSong?.title}
-            </h1>
-            <p className="text-xs sm:text-sm text-white/60 mt-0.5 font-medium">
-              {currentSong?.artist} {currentSong?.album ? `• ${currentSong.album}` : ""}
-            </p>
-          </div>
-        </div>
+      {/* Dynamic Ambient Glowing Aura (Eliminates dead void) */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-purple-600/15 rounded-full blur-[140px] animate-pulse" />
+        <div className="absolute bottom-1/3 right-1/4 w-[450px] h-[450px] bg-fuchsia-600/10 rounded-full blur-[140px]" />
+      </div>
 
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 text-white/80 text-xs font-semibold shrink-0">
-          <Mic2 className="w-3.5 h-3.5 text-white/80" />
-          <span>{isUnsyncedLyrics ? "≈ Lirik" : "Lirik"}</span>
-          {isLoadingLyrics && (
-            <Loader2 className="w-3 h-3 animate-spin text-white/60 ml-1" />
-          )}
+      <div className="relative z-10 max-w-7xl mx-auto">
+        {/* Two-Column Responsive Layout: Left Sticky Track Showcase + Right Synchronized Lyrics Stream */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-start">
+          
+          {/* Left Column: Sticky Song Showcase & Music Visualizer */}
+          <div className="lg:col-span-5 lg:sticky lg:top-4 flex flex-col items-center lg:items-start text-center lg:text-left space-y-5 py-4">
+            <div className="relative group w-52 h-52 sm:w-60 sm:h-60 lg:w-72 lg:h-72 rounded-xl overflow-hidden shadow-2xl border border-white/10 shrink-0 bg-[#120a22]">
+              <img
+                src={currentSong?.cover || "/default-cover.svg"}
+                alt={currentSong?.title}
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = "/default-cover.svg";
+                }}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+            </div>
+
+            <div className="space-y-1.5 w-full">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 text-[11px] font-bold tracking-wider">
+                <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+                <span>Lirik</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight leading-tight">
+                {currentSong?.title}
+              </h1>
+              <p className="text-sm sm:text-base text-purple-200/80 font-medium">
+                {currentSong?.artist} {currentSong?.album ? `• ${currentSong.album}` : ""}
+              </p>
+            </div>
+
+            {/* Live Equalizer Visualizer Bars */}
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.04] border border-white/5">
+              <div className="flex items-end gap-1 h-4">
+                <span className={`w-1 bg-purple-400 rounded-full ${isPlaying ? "animate-eq-1 h-3" : "h-1"}`} />
+                <span className={`w-1 bg-purple-400 rounded-full ${isPlaying ? "animate-eq-2 h-4" : "h-1.5"}`} />
+                <span className={`w-1 bg-purple-400 rounded-full ${isPlaying ? "animate-eq-3 h-2" : "h-1"}`} />
+                <span className={`w-1 bg-purple-400 rounded-full ${isPlaying ? "animate-eq-4 h-3.5" : "h-2"}`} />
+              </div>
+              <span className="text-xs font-semibold text-purple-300/90 ml-1">
+                {isPlaying ? "Sedang Mengalun" : "Musik Dijeda"}
+              </span>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="flex items-center gap-3 pt-1">
+              <button
+                onClick={togglePlay}
+                className="px-5 py-2.5 rounded-full bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-500 hover:to-fuchsia-500 text-white font-bold text-xs shadow-lg transition-all active:scale-95 flex items-center gap-2 cursor-pointer"
+              >
+                {isPlaying ? <Pause className="w-3.5 h-3.5 fill-white" /> : <Play className="w-3.5 h-3.5 fill-white ml-0.5" />}
+                <span>{isPlaying ? "Jeda Musik" : "Putar Musik"}</span>
+              </button>
+
+              <button
+                onClick={() => currentSong && toggleLike(currentSong)}
+                className={`p-2.5 rounded-full border transition-all ${
+                  isLiked
+                    ? "bg-purple-900/40 border-purple-500 text-purple-400"
+                    : "border-white/10 text-white/70 hover:text-white hover:border-white/30"
+                }`}
+                title={isLiked ? "Hapus dari Favorit" : "Simpan ke Favorit"}
+              >
+                <Heart className={`w-4 h-4 ${isLiked ? "fill-purple-500 text-purple-500" : ""}`} />
+              </button>
+            </div>
+          </div>
+
+          {/* Right Column: Synchronized Singing Lyrics Stream */}
+          <div className="lg:col-span-7 space-y-4 sm:space-y-6 py-4">
+            {cleanLyrics.length === 0 || isLoadingLyrics ? (
+              <div className="py-28 text-center space-y-3">
+                <Loader2 className="w-8 h-8 animate-spin text-purple-400 mx-auto" />
+                <p className="text-sm font-semibold text-purple-200/80">
+                  Menyelaraskan lirik karaoke...
+                </p>
+              </div>
+            ) : (
+              cleanLyrics.map((line, idx) => {
+                const isActive = idx === activeIndex;
+
+                return (
+                  <div
+                    key={idx}
+                    ref={isActive ? activeLineRef : null}
+                    onClick={() =>
+                      !isUnsyncedLyrics &&
+                      typeof line.time === "number" &&
+                      seek(line.time + (Number(currentSong?.lyricsOffset) || 0))
+                    }
+                    className={`transition-all duration-300 ease-out select-none py-1.5 px-3 rounded-lg ${
+                      isUnsyncedLyrics ? "cursor-default" : "cursor-pointer"
+                    } text-2xl sm:text-3xl md:text-4xl font-extrabold leading-snug tracking-tight ${
+                      isActive
+                        ? "text-white scale-[1.02] origin-left drop-shadow-[0_0_24px_rgba(168,85,247,0.4)]"
+                        : "text-white/30 hover:text-white/70"
+                    }`}
+                  >
+                    {line.text}
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
       </div>
 
@@ -228,43 +311,12 @@ export default function LyricsView() {
       {isUserScrolledAway && activeIndex >= 0 && (
         <button
           onClick={scrollToActive}
-          className="fixed bottom-28 right-8 z-30 flex items-center gap-2 px-4 py-2 rounded-full bg-[#282828]/95 hover:bg-[#383838] text-white text-xs font-semibold backdrop-blur-md border border-white/15 shadow-xl transition-all"
+          className="fixed bottom-28 right-8 z-30 flex items-center gap-2 px-4 py-2 rounded-full bg-[#1e1338]/95 hover:bg-[#281b4a] text-white text-xs font-semibold backdrop-blur-md border border-purple-500/30 shadow-xl transition-all cursor-pointer"
         >
-          <ArrowDown className="w-3.5 h-3.5 text-white/80" />
+          <ArrowDown className="w-3.5 h-3.5 text-purple-300" />
           <span>Kembali ke baris aktif</span>
         </button>
       )}
-
-      {/* Synchronized Lyrics List - Authentic Spotify Feel */}
-      <div className="space-y-3 sm:space-y-4 max-w-4xl py-4">
-        {cleanLyrics.length === 0 || isLoadingLyrics ? (
-          <div className="py-28 text-center space-y-3">
-            <Loader2 className="w-8 h-8 animate-spin text-white/40 mx-auto" />
-            <p className="text-sm font-semibold text-white/70">
-              Menyelaraskan lirik...
-            </p>
-          </div>
-        ) : (
-          cleanLyrics.map((line, idx) => {
-            const isActive = idx === activeIndex;
-
-            return (
-              <div
-                key={idx}
-                ref={isActive ? activeLineRef : null}
-                onClick={() => !isUnsyncedLyrics && typeof line.time === "number" && seek(line.time + (Number(currentSong?.lyricsOffset) || 0))}
-                className={`transition-colors duration-300 ease-out select-none py-1 px-2 rounded-lg ${isUnsyncedLyrics ? "cursor-default" : "cursor-pointer"} text-2xl sm:text-3xl md:text-[34px] font-bold leading-snug tracking-tight ${
-                  isActive
-                    ? "text-white"
-                    : "text-white/30 hover:text-white/60"
-                }`}
-              >
-                {line.text}
-              </div>
-            );
-          })
-        )}
-      </div>
     </div>
   );
 }
