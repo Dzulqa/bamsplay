@@ -6,7 +6,6 @@ import {
   Mic2,
   Heart,
   Maximize2,
-  ArrowDown,
   Sparkles,
   Music2,
   ChevronDown,
@@ -386,7 +385,6 @@ export default function RightSidebar() {
             onClick={scrollToActive}
             className="pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-xl border border-purple-400/40 transition-transform active:scale-95 cursor-pointer"
           >
-            <ArrowDown className="w-3.5 h-3.5" />
             <span>Ikuti Lagu</span>
           </button>
         </div>
