@@ -80,10 +80,18 @@ function ServiceWorkerRegistration() {
                 navigator.serviceWorker.register('/sw.js')
                   .then(function(reg) {
                     console.log('[Bamsplay] SW registered:', reg.scope);
+                    reg.update().catch(function() {});
                   })
                   .catch(function(err) {
                     console.warn('[Bamsplay] SW registration failed:', err);
                   });
+              });
+              document.addEventListener('visibilitychange', function() {
+                if (document.visibilityState === 'visible') {
+                  navigator.serviceWorker.ready.then(function(reg) {
+                    reg.update().catch(function() {});
+                  });
+                }
               });
             }
           }

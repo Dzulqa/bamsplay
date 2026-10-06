@@ -438,7 +438,7 @@ export default function RightSidebar() {
       </div>
 
       {/* Floating Return to Active Lyric Line Button */}
-      {isUserScrolledAway && activeIndex >= 0 && (
+      {isUserScrolledAway && cleanLyrics && cleanLyrics.length > 0 && (
         <div className="p-3 absolute bottom-3 left-0 right-0 flex justify-center z-10 pointer-events-none">
           <button
             onClick={scrollToActive}

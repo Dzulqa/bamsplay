@@ -212,17 +212,28 @@ export function AudioProvider({ children }) {
         .catch(() => {});
     }
 
+    // Select a random song on startup so reopening the app/web features a fresh random track
+    if (!isPlayingRef.current && initialSongs && initialSongs.length > 0) {
+      const randomIdx = Math.floor(Math.random() * initialSongs.length);
+      const initialRandomSong = initialSongs[randomIdx] || initialSongs[0];
+      setCurrentSong(initialRandomSong);
+      currentSongRef.current = initialRandomSong;
+      const initialDur = initialRandomSong.durationSec || 192;
+      durationRef.current = initialDur;
+      setDuration(initialDur);
+    }
+
     // Fetch official real catalog songs from /api/music/explore
     fetch("/api/music/explore")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.songs && data.songs.length > 0) {
           setSongs(data.songs);
-          if (!isPlayingRef.current && data.spotlight) {
+          setQueue(data.songs);
+          queueRef.current = data.songs;
+          if (!isPlayingRef.current && !currentSongRef.current && data.spotlight) {
             setCurrentSong(data.spotlight);
             currentSongRef.current = data.spotlight;
-            setQueue(data.songs);
-            queueRef.current = data.songs;
             const spotDur = data.spotlight.durationSec || 192;
             durationRef.current = spotDur;
             setDuration(spotDur);

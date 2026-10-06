@@ -1,7 +1,7 @@
 // =====================================================================
 // Bamsplay Service Worker - PWA Offline Support
 // =====================================================================
-const CACHE_NAME = 'bamsplay-v2';
+const CACHE_NAME = 'bamsplay-v3';
 const STATIC_ASSETS = [
   '/manifest.json',
   '/icons/icon-192x192.png',
@@ -38,7 +38,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// ─── Fetch: network-first for API, cache-first for static ────────────
+// ─── Fetch: network-first for API & navigation, stale-while-revalidate for static ──
 self.addEventListener('fetch', (event) => {
   // Never intercept requests on localhost in development
   if (self.location.hostname === 'localhost' || self.location.hostname === '127.0.0.1') {
@@ -60,30 +60,44 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static assets: cache-first strategy
+  // Navigation requests (HTML pages): ALWAYS network-first so new releases appear immediately without hard refresh
+  if (request.mode === 'navigate' || url.pathname === '/') {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response && response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+            return response;
+          }
+          return caches.match(request).then((cached) => cached || response);
+        })
+        .catch(() => {
+          return caches.match(request).then((cached) => cached || caches.match('/'));
+        })
+    );
+    return;
+  }
+
+  // Static assets: Stale-While-Revalidate strategy
   event.respondWith(
     caches.match(request).then((cached) => {
-      if (cached) return cached;
-
-      return fetch(request)
+      const fetchPromise = fetch(request)
         .then((response) => {
-          // Cache successful responses for static assets
           if (
+            response &&
             response.ok &&
             (url.pathname.match(/\.(png|jpg|jpeg|svg|webp|ico|css|js|woff2|woff)$/) ||
-              url.pathname === '/')
+              url.pathname.startsWith('/_next/'))
           ) {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
           }
           return response;
         })
-        .catch(() => {
-          // Offline fallback for navigation requests
-          if (request.mode === 'navigate') {
-            return caches.match('/');
-          }
-        });
+        .catch(() => cached);
+
+      return cached || fetchPromise;
     })
   );
 });

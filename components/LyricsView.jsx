@@ -363,7 +363,7 @@ export default function LyricsView() {
       </div>
 
       {/* Floating Spotify-style "Kembali ke baris aktif" pill */}
-      {isUserScrolledAway && activeIndex >= 0 && (
+      {isUserScrolledAway && cleanLyrics && cleanLyrics.length > 0 && (
         <button
           onClick={scrollToActive}
           className="fixed bottom-28 right-8 z-30 flex items-center gap-2 px-4 py-2 rounded-full bg-[#1e1338]/95 hover:bg-[#281b4a] text-white text-xs font-semibold backdrop-blur-md border border-purple-500/30 shadow-xl transition-all cursor-pointer animate-fadeIn"

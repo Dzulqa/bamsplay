@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { initialSongs, topArtists, searchCategories } from "@/data/musicData";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const filter = searchParams.get("filter") || "all";
@@ -49,8 +51,11 @@ export async function GET(request) {
       )
   );
 
+  const randomSpotlightIndex = Math.floor(Math.random() * initialSongs.length);
+  const spotlight = initialSongs[randomSpotlightIndex] || initialSongs[0];
+
   const exploreData = {
-    spotlight: initialSongs[0],
+    spotlight,
     songs: initialSongs,
     trendingIndo,
     trendingGlobal,
