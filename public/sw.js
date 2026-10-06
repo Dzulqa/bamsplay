@@ -50,6 +50,11 @@ self.addEventListener('fetch', (event) => {
   // Skip non-GET requests and browser-extension requests
   if (request.method !== 'GET' || !url.protocol.startsWith('http')) return;
 
+  // Skip cross-origin requests (e.g. Google avatars, external CDNs) so browser handles them natively
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
   // API routes: network only, no caching
   if (url.pathname.startsWith('/api/')) {
     return; // let it fall through to network

@@ -10,6 +10,7 @@ import {
   ListMusic,
   Search,
   Sparkles,
+  Heart,
 } from "lucide-react";
 
 export default function AddToPlaylistModal() {
@@ -18,6 +19,8 @@ export default function AddToPlaylistModal() {
     closeAddToPlaylistModal,
     selectedSongForPlaylist,
     playlists,
+    likedSongIds,
+    toggleLike,
     addSongToPlaylist,
     removeSongFromPlaylist,
     createNewPlaylist,
@@ -51,7 +54,7 @@ export default function AddToPlaylistModal() {
 
     setNewPlaylistTitle("");
     setIsCreatingNew(false);
-    showToast(`Ditambahkan ke "${created.title}"`, "purple");
+    showToast(`Lagu telah ditambahkan ke playlist "${created.title}"`, "purple");
   };
 
   const handleToggleSongInPlaylist = (playlist) => {
@@ -177,11 +180,80 @@ export default function AddToPlaylistModal() {
 
         {/* Playlists List */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-1.5 custom-scrollbar min-h-[160px] max-h-[300px]">
-          {filteredPlaylists.length === 0 ? (
+          {/* Top Priority: Lagu Favorit (Liked Songs) */}
+          {(!searchFilter ||
+            "lagu favorit".includes(searchFilter.toLowerCase()) ||
+            "favorit".includes(searchFilter.toLowerCase()) ||
+            "liked".includes(searchFilter.toLowerCase())) && (
+            (() => {
+              const isLiked = likedSongIds.includes(selectedSongForPlaylist.id);
+              return (
+                <div
+                  onClick={() => toggleLike(selectedSongForPlaylist)}
+                  className={`flex items-center justify-between p-2 sm:p-2.5 rounded-md cursor-pointer transition-colors border ${
+                    isLiked
+                      ? "bg-purple-950/40 border-purple-500/40 text-purple-200"
+                      : "bg-[#110a24]/50 hover:bg-[#1f153a] border-transparent hover:border-white/5 text-[#cbc5dc]"
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0 flex-1 pr-2">
+                    {/* Cover / Icon */}
+                    <div className="w-10 h-10 rounded-md overflow-hidden shrink-0 border border-white/10 shadow-sm flex items-center justify-center bg-gradient-to-br from-indigo-500 via-purple-600 to-fuchsia-700">
+                      <Heart
+                        className={`w-5 h-5 ${
+                          isLiked ? "fill-white text-white" : "text-purple-200"
+                        }`}
+                      />
+                    </div>
+
+                    {/* Details */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-xs sm:text-sm text-white truncate">
+                          Lagu Favorit
+                        </span>
+                        <span className="text-[10px] font-medium px-1.5 py-0.2 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 shrink-0">
+                          Koleksi
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-[#8e85a6] truncate block">
+                        {likedSongIds.length} lagu
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Toggle Check / Plus Button */}
+                  <button
+                    type="button"
+                    className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-all ${
+                      isLiked
+                        ? "bg-purple-600 text-white shadow-sm hover:bg-purple-700"
+                        : "border border-purple-500/30 text-[#8e85a6] hover:text-white hover:border-purple-400"
+                    }`}
+                    title={
+                      isLiked
+                        ? "Hapus dari Lagu Favorit"
+                        : "Tambahkan ke Lagu Favorit"
+                    }
+                  >
+                    {isLiked ? (
+                      <Check className="w-3.5 h-3.5" />
+                    ) : (
+                      <Plus className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                </div>
+              );
+            })()
+          )}
+
+          {filteredPlaylists.length === 0 &&
+          searchFilter &&
+          !("lagu favorit".includes(searchFilter.toLowerCase()) ||
+            "favorit".includes(searchFilter.toLowerCase()) ||
+            "liked".includes(searchFilter.toLowerCase())) ? (
             <div className="py-8 text-center text-xs text-[#8d84a7]">
-              {searchFilter
-                ? "Tidak ada playlist yang cocok."
-                : "Belum ada playlist kustom. Silakan buat playlist baru di atas."}
+              Tidak ada playlist yang cocok.
             </div>
           ) : (
             filteredPlaylists.map((pl) => {

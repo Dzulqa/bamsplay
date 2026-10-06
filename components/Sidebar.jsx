@@ -12,9 +12,9 @@ import {
   ArrowRight,
   FolderUp,
   Music,
-  ArrowDownToLine,
   Trash2,
   Edit3,
+  ArrowLeft,
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -27,8 +27,6 @@ export default function Sidebar() {
     openDeletePlaylistModal,
     openEditPlaylistModal,
     likedSongIds,
-    downloadedSongIds,
-    downloadStats,
     isSidebarCollapsed,
     setIsSidebarCollapsed,
     addLocalSongs,
@@ -142,7 +140,7 @@ export default function Sidebar() {
                 className="p-1 rounded-md text-[#9e95b9] hover:text-white hover:bg-purple-900/30 transition-colors"
                 title="Ciutkan Sidebar"
               >
-                <ArrowRight className="w-3.5 h-3.5" />
+                <ArrowLeft className="w-3.5 h-3.5" />
               </button>
             </div>
           )}
@@ -170,39 +168,6 @@ export default function Sidebar() {
                 </span>
                 <span className="text-[11px] text-[#8e85a6] truncate block">
                   Daftar Putar
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Downloaded Songs (Offline) */}
-          <div
-            onClick={() => navigateTo("downloaded")}
-            className={`flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors ${
-              activeView === "downloaded"
-                ? "bg-emerald-950/40 text-emerald-300 border border-emerald-500/20"
-                : "hover:bg-white/[0.04] text-[#c8c2dc]"
-            } ${isSidebarCollapsed ? "justify-center p-1.5" : ""}`}
-            title="Lagu Terunduh (Offline)"
-          >
-            <div className="w-10 h-10 rounded-md bg-gradient-to-tr from-emerald-600 via-teal-700 to-emerald-800 flex items-center justify-center shrink-0 shadow-sm relative group-hover:scale-105 transition-transform">
-              <ArrowDownToLine className="w-4 h-4 text-emerald-200" />
-              {downloadedSongIds?.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-400 text-black font-extrabold text-[9px] rounded-full flex items-center justify-center shadow-md">
-                  {downloadedSongIds.length > 99 ? "99+" : downloadedSongIds.length}
-                </span>
-              )}
-            </div>
-            {!isSidebarCollapsed && (
-              <div className="min-w-0 flex-1">
-                <span className="font-bold text-xs truncate flex items-center justify-between text-white">
-                  <span>Lagu Terunduh</span>
-                  <span className="text-[9px] px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-medium">
-                    Offline
-                  </span>
-                </span>
-                <span className="text-[11px] text-[#8e85a6] truncate block">
-                  {downloadedSongIds?.length || 0} lagu • {downloadStats?.formattedSize || "0 MB"}
                 </span>
               </div>
             )}

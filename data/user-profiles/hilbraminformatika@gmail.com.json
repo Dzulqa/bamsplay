@@ -1,7 +1,7 @@
 {
   "user": {
     "email": "hilbraminformatika@gmail.com",
-    "name": "Dzulqa_i",
+    "name": "dzulqa",
     "avatar": "https://lh3.googleusercontent.com/a/ACg8ocIj-2dhZB3tYo4yIrXWUyjJqBXO7eSd2mtj3-20AqitGiwFpis=s96-c",
     "provider": "google"
   },
@@ -20,13 +20,7 @@
       "songIds": []
     }
   ],
-  "likedSongIds": [
-    "bernadya-1",
-    "bernadya-2",
-    "bernadya-3",
-    "taylor-3",
-    "taylor-2",
-    "tulus-2"
-  ],
-  "updatedAt": "2026-10-06T04:48:34.465Z"
+  "likedSongIds": [],
+  "customSongs": [],
+  "updatedAt": "2026-10-06T14:57:32.787Z"
 }

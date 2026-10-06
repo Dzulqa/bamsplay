@@ -17,6 +17,8 @@ import {
   ListPlus,
   Laptop2,
   Share2,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 
 export default function MobilePlayerModal() {
@@ -42,6 +44,10 @@ export default function MobilePlayerModal() {
     navigateTo,
     setIsDeviceModalOpen,
     showToast,
+    volume,
+    setVolume,
+    isMuted,
+    toggleMute,
   } = useAudio();
 
   const [showLyricsCard, setShowLyricsCard] = useState(false);
@@ -353,6 +359,35 @@ export default function MobilePlayerModal() {
             <Repeat className="w-5 h-5" />
           )}
         </button>
+      </div>
+
+      {/* Mobile Volume Slider & Indicator */}
+      <div className="flex items-center gap-3 px-3.5 py-2.5 mb-5 bg-[#170e30]/80 border border-purple-500/20 rounded-xl backdrop-blur-sm">
+        <button
+          onClick={toggleMute}
+          className="text-purple-300 hover:text-white transition-colors"
+          title={isMuted ? "Bunyikan" : "Bisukan"}
+        >
+          {isMuted || volume === 0 ? (
+            <VolumeX className="w-4 h-4 text-rose-400" />
+          ) : (
+            <Volume2 className="w-4 h-4 text-purple-400" />
+          )}
+        </button>
+        <div className="flex-1 flex items-center relative">
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value={isMuted ? 0 : volume}
+            onChange={(e) => setVolume(parseFloat(e.target.value))}
+            className="w-full h-1.5 bg-[#251a42] rounded-lg appearance-none cursor-pointer accent-purple-500"
+          />
+        </div>
+        <span className="text-[11px] font-mono text-purple-300 font-semibold w-8 text-right">
+          {isMuted ? "0%" : `${Math.round(volume * 100)}%`}
+        </span>
       </div>
 
       {/* Bottom Sub-Actions: Device, Lyrics, Queue */}

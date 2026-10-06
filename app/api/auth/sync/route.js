@@ -47,6 +47,7 @@ export async function GET(request) {
       user: data.user || null,
       playlists: data.playlists || [],
       likedSongIds: data.likedSongIds || [],
+      customSongs: data.customSongs || [],
       updatedAt: data.updatedAt || null,
     });
   } catch (error) {
@@ -66,6 +67,7 @@ export async function POST(request) {
     };
     const playlists = body.playlists;
     const likedSongIds = body.likedSongIds;
+    const customSongs = body.customSongs;
 
     if (!userObj || !userObj.email) {
       return NextResponse.json({ error: "User email is required" }, { status: 400 });
@@ -77,15 +79,24 @@ export async function POST(request) {
       return NextResponse.json({ error: "Invalid email" }, { status: 400 });
     }
 
+    let existingAvatar = "";
+    if (fs.existsSync(filePath)) {
+      try {
+        const prev = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+        existingAvatar = prev?.user?.avatar || "";
+      } catch (_) {}
+    }
+
     const payload = {
       user: {
         email: userObj.email.toLowerCase().trim(),
         name: userObj.name || userObj.email.split("@")[0],
-        avatar: userObj.avatar || "",
+        avatar: userObj.avatar || existingAvatar || "",
         provider: "google",
       },
       playlists: Array.isArray(playlists) ? playlists : [],
       likedSongIds: Array.isArray(likedSongIds) ? likedSongIds : [],
+      customSongs: Array.isArray(customSongs) ? customSongs : [],
       updatedAt: new Date().toISOString(),
     };
 

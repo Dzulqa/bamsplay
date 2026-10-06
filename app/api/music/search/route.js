@@ -2,18 +2,25 @@ import { NextResponse } from "next/server";
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
+  const idParam = searchParams.get("id");
   const query = searchParams.get("q") || searchParams.get("term") || "";
   const limit = parseInt(searchParams.get("limit") || "30", 10);
   const country = searchParams.get("country") || "ID";
 
-  if (!query.trim()) {
+  if (!query.trim() && !idParam) {
     return NextResponse.json({ songs: [], total: 0 });
   }
 
   try {
-    const itunesUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(
-      query
-    )}&entity=song&limit=${Math.min(limit, 50)}&country=${country}`;
+    const rawParam = (idParam || query || "").trim();
+    const isIdLookup = !!idParam || /^\d+$/.test(rawParam) || rawParam.startsWith("global-");
+    const lookupTrackId = rawParam.replace(/^global-/, "");
+
+    const itunesUrl = isIdLookup
+      ? `https://itunes.apple.com/lookup?id=${encodeURIComponent(lookupTrackId)}&country=${country}`
+      : `https://itunes.apple.com/search?term=${encodeURIComponent(
+          query
+        )}&entity=song&limit=${Math.min(limit, 50)}&country=${country}`;
 
     const res = await fetch(itunesUrl, {
       headers: {

@@ -15,10 +15,8 @@ import {
   TrendingUp,
   Disc3,
   Flame,
-  CheckCircle2,
   ListPlus,
   ListMusic,
-  ArrowDownToLine,
 } from "lucide-react";
 
 export default function SearchView() {
@@ -33,10 +31,6 @@ export default function SearchView() {
     togglePlay,
     likedSongIds,
     toggleLike,
-    downloadedSongIds,
-    downloadingMap,
-    downloadSong,
-    removeDownloadedSong,
     navigateTo,
     addToQueue,
     openAddToPlaylistModal,
@@ -339,8 +333,6 @@ export default function SearchView() {
                       const isThisPlaying =
                         isPlaying && currentSong?.id === song.id;
                       const isLiked = likedSongIds.includes(song.id);
-                      const isSongDl = downloadedSongIds?.includes(song.id);
-                      const isSongDling = !!downloadingMap?.[song.id];
 
                       return (
                         <div
@@ -441,37 +433,6 @@ export default function SearchView() {
                                   : ""
                                   }`}
                               />
-                            </button>
-
-                            {/* Download button */}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (isSongDl) removeDownloadedSong(song.id);
-                                else downloadSong(song);
-                              }}
-                              className={`p-1.5 transition-colors ${
-                                isSongDl
-                                  ? "text-emerald-400"
-                                  : isSongDling
-                                  ? "text-purple-400"
-                                  : "text-[#958dae] hover:text-white"
-                              }`}
-                              title={
-                                isSongDl
-                                  ? "Lagu terunduh (Klik untuk hapus dari offline)"
-                                  : isSongDling
-                                  ? "Sedang mengunduh lagu..."
-                                  : "Unduh untuk putar offline"
-                              }
-                            >
-                              {isSongDling ? (
-                                <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
-                              ) : isSongDl ? (
-                                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                              ) : (
-                                <ArrowDownToLine className="w-4 h-4" />
-                              )}
                             </button>
 
                             <span className="font-mono text-[#8a81a6] text-[11px] w-9 text-right">

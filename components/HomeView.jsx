@@ -12,9 +12,6 @@ import {
   ListPlus,
   ListMusic,
   Music,
-  ArrowDownToLine,
-  CheckCircle2,
-  Loader2,
   Trash2,
 } from "lucide-react";
 import { initialSongs, topArtists } from "@/data/musicData";
@@ -29,10 +26,6 @@ export default function HomeView() {
     togglePlay,
     likedSongIds,
     toggleLike,
-    downloadedSongIds,
-    downloadingMap,
-    downloadSong,
-    removeDownloadedSong,
     navigateTo,
     addToQueue,
     openAddToPlaylistModal,
@@ -149,38 +142,6 @@ export default function HomeView() {
                 title="Tambahkan ke Playlist"
               >
                 <ListPlus className="w-5 h-5" />
-              </button>
-
-              <button
-                onClick={() => {
-                  if (downloadedSongIds?.includes(spotlightSong.id)) {
-                    removeDownloadedSong(spotlightSong.id);
-                  } else {
-                    downloadSong(spotlightSong);
-                  }
-                }}
-                className={`p-3 rounded-full border transition-all ${
-                  downloadedSongIds?.includes(spotlightSong.id)
-                    ? "bg-emerald-950/60 border-emerald-500 text-emerald-400 shadow-md shadow-emerald-500/20"
-                    : downloadingMap?.[spotlightSong.id]
-                    ? "bg-purple-900/30 border-purple-400 text-purple-300"
-                    : "border-purple-500/30 text-white/80 hover:text-white hover:border-purple-400 hover:bg-purple-900/20"
-                }`}
-                title={
-                  downloadedSongIds?.includes(spotlightSong.id)
-                    ? "Lagu spotlight terunduh offline (Klik untuk hapus)"
-                    : downloadingMap?.[spotlightSong.id]
-                    ? "Sedang mengunduh..."
-                    : "Unduh Lagu Offline"
-                }
-              >
-                {downloadingMap?.[spotlightSong.id] ? (
-                  <Loader2 className="w-5 h-5 animate-spin text-purple-400" />
-                ) : downloadedSongIds?.includes(spotlightSong.id) ? (
-                  <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                ) : (
-                  <ArrowDownToLine className="w-5 h-5" />
-                )}
               </button>
             </div>
           </div>
@@ -326,40 +287,6 @@ export default function HomeView() {
                           likedSongIds.includes(song.id) ? "fill-purple-500 text-purple-500" : ""
                         }`}
                       />
-                    </button>
-
-                    {/* Download Button */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (downloadedSongIds?.includes(song.id)) {
-                          removeDownloadedSong(song.id);
-                        } else {
-                          downloadSong(song);
-                        }
-                      }}
-                      className={`w-7 h-7 rounded-full bg-black/70 hover:bg-black/90 flex items-center justify-center backdrop-blur-md shadow-md transition-all active:scale-90 ${
-                        downloadedSongIds?.includes(song.id)
-                          ? "text-emerald-400"
-                          : downloadingMap?.[song.id]
-                          ? "text-purple-400"
-                          : "text-white"
-                      }`}
-                      title={
-                        downloadedSongIds?.includes(song.id)
-                          ? "Lagu terunduh offline (Klik untuk hapus)"
-                          : downloadingMap?.[song.id]
-                          ? "Sedang mengunduh..."
-                          : "Unduh Lagu Offline"
-                      }
-                    >
-                      {downloadingMap?.[song.id] ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : downloadedSongIds?.includes(song.id) ? (
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                      ) : (
-                        <ArrowDownToLine className="w-3.5 h-3.5" />
-                      )}
                     </button>
                   </div>
 

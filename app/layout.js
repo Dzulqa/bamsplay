@@ -17,7 +17,7 @@ export const viewport = {
 };
 
 export const metadata = {
-  title: "Bamsplay - Web Player: Music for everyone",
+  title: "Bamsplay Music",
   description:
     "Bamsplay is a modern, Spotify-inspired web music player with an elegant purple theme.",
   manifest: "/manifest.json",

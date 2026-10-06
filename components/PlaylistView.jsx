@@ -8,17 +8,14 @@ import {
   Heart,
   Clock,
   MoreHorizontal,
-  Download,
   Share2,
   Check,
   Search,
   ListPlus,
   ListMusic,
   Trash2,
-  ArrowDownToLine,
-  CheckCircle2,
-  Loader2,
   Edit3,
+  Shuffle,
 } from "lucide-react";
 
 export default function PlaylistView() {
@@ -32,10 +29,6 @@ export default function PlaylistView() {
     togglePlay,
     likedSongIds,
     toggleLike,
-    downloadedSongIds,
-    downloadingMap,
-    downloadSong,
-    removeDownloadedSong,
     addToQueue,
     navigateTo,
     showToast,
@@ -46,10 +39,13 @@ export default function PlaylistView() {
     isSidebarCollapsed,
     isRightSidebarOpen,
     activeView,
+    isShuffle,
+    toggleShuffle,
+    playShufflePlaylist,
+    registerKnownSong,
   } = useAudio();
 
   const [playlistSearch, setPlaylistSearch] = useState("");
-  const [isDownloaded, setIsDownloaded] = useState(false);
   const [activeMenuSongId, setActiveMenuSongId] = useState(null);
 
   // Ditambahkan / Added Date column is only displayed when there is sufficient horizontal space:
@@ -63,11 +59,30 @@ export default function PlaylistView() {
     playlists.find((p) => p.id === playlistId) ||
     playlists.find((p) => p.id === "liked-songs");
 
-  if (!playlist) return null;
+  const isLikedView = playlist?.id === "liked-songs" || playlist?.isLikedPlaylist;
+  const currentSongIds = isLikedView ? likedSongIds : playlist?.songIds || [];
+  const playlistSongs = currentSongIds.map((id) => songs.find((s) => s.id === id)).filter(Boolean);
 
-  const isLikedView = playlist.id === "liked-songs" || playlist.isLikedPlaylist;
-  const currentSongIds = isLikedView ? likedSongIds : playlist.songIds || [];
-  const playlistSongs = songs.filter((s) => currentSongIds.includes(s.id));
+  // Self-healing: if any song ID in currentSongIds is not yet loaded into songs state,
+  // fetch it immediately from /api/music/search?id=... and register it!
+  React.useEffect(() => {
+    if (!currentSongIds || currentSongIds.length === 0) return;
+    const missingIds = currentSongIds.filter((id) => !songs.some((s) => s.id === id));
+    if (missingIds.length === 0) return;
+
+    missingIds.forEach((id) => {
+      fetch(`/api/music/search?id=${encodeURIComponent(id)}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.songs && data.songs.length > 0) {
+            registerKnownSong(data.songs[0]);
+          }
+        })
+        .catch(() => {});
+    });
+  }, [currentSongIds, songs, registerKnownSong]);
+
+  if (!playlist) return null;
 
   const filteredSongs = playlistSearch
     ? playlistSongs.filter(
@@ -81,12 +96,34 @@ export default function PlaylistView() {
   const isCurrentPlaylistPlaying =
     isPlaying && currentSong && currentSongIds.includes(currentSong.id);
 
+  const handleShuffleClick = () => {
+    if (playlistSongs.length === 0) return;
+    if (isCurrentPlaylistPlaying) {
+      toggleShuffle();
+    } else {
+      if (playShufflePlaylist) {
+        playShufflePlaylist(playlist, playlistSongs);
+      } else {
+        playSong(playlistSongs[0], playlist, playlistSongs);
+      }
+    }
+  };
+
   const handlePlayAll = () => {
     if (playlistSongs.length === 0) return;
     if (isCurrentPlaylistPlaying) {
       togglePlay();
     } else {
-      playSong(playlistSongs[0], playlist);
+      if (isShuffle) {
+        if (playShufflePlaylist) {
+          playShufflePlaylist(playlist, playlistSongs);
+        } else {
+          const randomIndex = Math.floor(Math.random() * playlistSongs.length);
+          playSong(playlistSongs[randomIndex], playlist, playlistSongs);
+        }
+      } else {
+        playSong(playlistSongs[0], playlist, playlistSongs);
+      }
     }
   };
 
@@ -151,7 +188,7 @@ export default function PlaylistView() {
           <button
             onClick={handlePlayAll}
             className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-purple-600 hover:bg-purple-500 text-white flex items-center justify-center purple-glow-sm hover:scale-105 active:scale-95 transition-all shadow-xl cursor-pointer"
-            title={isCurrentPlaylistPlaying ? "Jeda" : "Putar Semua"}
+            title={isCurrentPlaylistPlaying ? "Jeda" : isShuffle ? "Putar Acak Playlist" : "Putar Semua"}
           >
             {isCurrentPlaylistPlaying ? (
               <Pause className="w-5 h-5 sm:w-6 sm:h-6 fill-white" />
@@ -160,35 +197,19 @@ export default function PlaylistView() {
             )}
           </button>
 
+          {/* Spotify-style Shuffle Button */}
           <button
-            onClick={async () => {
-              const toDownload = playlistSongs.filter(
-                (s) => !downloadedSongIds?.includes(s.id)
-              );
-              if (toDownload.length === 0) {
-                showToast("Semua lagu di playlist ini sudah tersimpan offline!", "purple");
-                return;
-              }
-              showToast(`Memulai unduhan ${toDownload.length} lagu playlist untuk offline...`, "purple");
-              for (const s of toDownload) {
-                await downloadSong(s);
-              }
-            }}
-            className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center border transition-colors ${
-              playlistSongs.length > 0 && playlistSongs.every((s) => downloadedSongIds?.includes(s.id))
-                ? "bg-emerald-950/60 text-emerald-400 border-emerald-500/50"
-                : "border-[#312554] text-[#9a91b4] hover:text-white"
+            onClick={handleShuffleClick}
+            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border transition-all cursor-pointer relative ${
+              isShuffle
+                ? "bg-purple-600/30 border-purple-500 text-purple-300 shadow-md shadow-purple-600/30 hover:bg-purple-600/40 hover:scale-105"
+                : "border-[#312554] text-[#9a91b4] hover:text-white hover:border-purple-500/40 hover:bg-[#1a1233]"
             }`}
-            title={
-              playlistSongs.length > 0 && playlistSongs.every((s) => downloadedSongIds?.includes(s.id))
-                ? "Semua lagu di playlist ini terunduh offline"
-                : "Unduh Semua Lagu di Playlist Ini"
-            }
+            title={isShuffle ? "Acak Playlist (Aktif)" : "Acak Playlist"}
           >
-            {playlistSongs.length > 0 && playlistSongs.every((s) => downloadedSongIds?.includes(s.id)) ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-            ) : (
-              <ArrowDownToLine className="w-4 h-4" />
+            <Shuffle className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
+            {isShuffle && (
+              <span className="absolute -bottom-0.5 w-1.5 h-1.5 bg-purple-400 rounded-full shadow-[0_0_6px_#a855f7]" />
             )}
           </button>
 
@@ -262,20 +283,27 @@ export default function PlaylistView() {
         {/* Songs Items */}
         <div className="mt-2 space-y-1">
           {filteredSongs.length === 0 ? (
-            <div className="py-12 text-center text-[#8e85a8] text-xs sm:text-sm">
-              Tidak ada lagu yang cocok dalam daftar putar ini.
+            <div className="py-12 flex flex-col items-center justify-center gap-2 text-[#8e85a8] text-xs sm:text-sm">
+              {currentSongIds.length > 0 && playlistSongs.length === 0 ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin text-purple-400" />
+                  <span>Memuat lagu playlist...</span>
+                </>
+              ) : playlistSearch ? (
+                <span>Tidak ada lagu yang cocok dengan pencarian &quot;{playlistSearch}&quot;.</span>
+              ) : (
+                <span>Belum ada lagu dalam playlist ini.</span>
+              )}
             </div>
           ) : (
             filteredSongs.map((song, index) => {
               const isThisPlaying = isPlaying && currentSong?.id === song.id;
               const isLiked = likedSongIds.includes(song.id);
-              const isSongDl = downloadedSongIds?.includes(song.id);
-              const isSongDling = !!downloadingMap?.[song.id];
 
               return (
                 <div
                   key={song.id}
-                  onClick={() => playSong(song, playlist)}
+                  onClick={() => playSong(song, playlist, playlistSongs)}
                   className={`flex sm:grid sm:grid-cols-12 gap-3 sm:gap-4 items-center px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg group cursor-pointer transition-colors ${
                     currentSong?.id === song.id
                       ? "bg-purple-950/30 text-purple-300"
@@ -417,40 +445,6 @@ export default function PlaylistView() {
                             : "opacity-70 group-hover:opacity-100"
                         }`}
                       />
-                    </button>
-
-                    {/* Download button */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (isSongDl) {
-                          removeDownloadedSong(song.id);
-                        } else {
-                          downloadSong(song);
-                        }
-                      }}
-                      className={`p-1 transition-all ${
-                        isSongDl
-                          ? "text-emerald-400 opacity-100"
-                          : isSongDling
-                          ? "text-purple-400 opacity-100"
-                          : "text-[#877e9f] hover:text-white opacity-0 group-hover:opacity-100"
-                      }`}
-                      title={
-                        isSongDl
-                          ? "Lagu terunduh (Klik untuk hapus dari offline)"
-                          : isSongDling
-                          ? "Sedang mengunduh lagu..."
-                          : "Unduh untuk putar offline"
-                      }
-                    >
-                      {isSongDling ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-400" />
-                      ) : isSongDl ? (
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                      ) : (
-                        <ArrowDownToLine className="w-3.5 h-3.5" />
-                      )}
                     </button>
 
                     <span className="font-mono text-[#8a81a4] text-xs">

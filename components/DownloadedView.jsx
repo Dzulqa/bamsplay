@@ -64,21 +64,29 @@ export default function DownloadedView() {
 
   const handlePlayAll = () => {
     if (filteredSongs.length === 0) return;
-    playSong(filteredSongs[0], {
-      id: "downloaded-songs",
-      title: "Lagu Terunduh",
-      songIds: filteredSongs.map((s) => s.id),
-    });
+    playSong(
+      filteredSongs[0],
+      {
+        id: "downloaded-songs",
+        title: "Lagu Terunduh",
+        songIds: filteredSongs.map((s) => s.id),
+      },
+      filteredSongs
+    );
   };
 
   const handleShufflePlay = () => {
     if (filteredSongs.length === 0) return;
     const randomIndex = Math.floor(Math.random() * filteredSongs.length);
-    playSong(filteredSongs[randomIndex], {
-      id: "downloaded-songs",
-      title: "Lagu Terunduh",
-      songIds: filteredSongs.map((s) => s.id),
-    });
+    playSong(
+      filteredSongs[randomIndex],
+      {
+        id: "downloaded-songs",
+        title: "Lagu Terunduh",
+        songIds: filteredSongs.map((s) => s.id),
+      },
+      filteredSongs
+    );
   };
 
   const formatSize = (bytes) => {

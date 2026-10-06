@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useAudio } from "@/context/AudioContext";
 import { X, Check, UserPlus, Sparkles, ShieldCheck, Mail, ArrowRight, Loader2 } from "lucide-react";
 import BamsplayLogo from "./BamsplayLogo";
+import UserAvatar from "./UserAvatar";
 
 export default function LoginModal() {
   const {
@@ -230,9 +231,7 @@ export default function LoginModal() {
                     }`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center font-bold text-sm text-white shadow shrink-0">
-                        {initial}
-                      </div>
+                      <UserAvatar user={acc} size="md" />
 
                       <div className="min-w-0">
                         <div className="font-bold text-xs sm:text-sm text-white truncate flex items-center gap-1.5">

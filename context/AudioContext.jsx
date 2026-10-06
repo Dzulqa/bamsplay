@@ -25,6 +25,28 @@ function readLS(key, fallback) {
   }
 }
 
+// Mobile & Capacitor APK detection helper
+const isMobileDevice = () => {
+  if (typeof window === "undefined") return false;
+  return (
+    window.innerWidth <= 768 ||
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+    window.Capacitor !== undefined ||
+    window.location.protocol === "capacitor:" ||
+    (typeof navigator !== "undefined" && navigator.maxTouchPoints > 1)
+  );
+};
+
+// Fisher-Yates array shuffle helper
+const shuffleArray = (array) => {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+};
+
 export function AudioProvider({ children }) {
   const [songs, setSongs] = useState(initialSongs);
   // Start empty — will be restored from localStorage in the mount effect below
@@ -55,8 +77,23 @@ export function AudioProvider({ children }) {
     currentTimeRef.current = time;
     setCurrentTimeState(time);
   };
-  const [volume, setVolumeState] = useState(0.8);
-  const [prevVolume, setPrevVolume] = useState(0.8);
+  const [volume, setVolumeState] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = window.localStorage.getItem("bamsplay_volume");
+        if (saved !== null) {
+          const parsed = parseFloat(saved);
+          if (!isNaN(parsed)) {
+            if (isMobileDevice()) return 1.0;
+            return parsed;
+          }
+        }
+      } catch (_) {}
+      if (isMobileDevice()) return 1.0;
+    }
+    return 1.0;
+  });
+  const [prevVolume, setPrevVolume] = useState(1.0);
   const [isMuted, setIsMuted] = useState(false);
   const [isShuffle, setIsShuffle] = useState(false);
   const [repeatMode, setRepeatMode] = useState("off"); // 'off' | 'all' | 'one'
@@ -119,7 +156,15 @@ export function AudioProvider({ children }) {
   const playbackHistoryRef = useRef([]);
   const masterTickerRef = useRef(null);
 
+  const currentPlaylistRef = useRef(null);
+  const playlistShuffleQueueRef = useRef([]);
+  const playlistPlayedSongIdsRef = useRef(new Set());
+
   // Sync refs with state changes
+  useEffect(() => {
+    currentPlaylistRef.current = currentPlaylist;
+  }, [currentPlaylist]);
+
   useEffect(() => {
     currentSongRef.current = currentSong;
   }, [currentSong]);
@@ -163,6 +208,54 @@ export function AudioProvider({ children }) {
     likedSongIdsRef.current = likedSongIds;
   }, [likedSongIds]);
 
+  // Register known song(s) so dynamic tracks (e.g. from search, explore, like) persist permanently
+  const registerKnownSong = (songOrSongs) => {
+    if (!songOrSongs) return;
+    const incoming = Array.isArray(songOrSongs) ? songOrSongs : [songOrSongs];
+    const valid = incoming.filter((s) => s && s.id);
+    if (valid.length === 0) return;
+
+    setSongs((prev) => {
+      const map = new Map();
+      prev.forEach((s) => s && s.id && map.set(s.id, s));
+      valid.forEach((s) => map.set(s.id, s));
+      const merged = Array.from(map.values());
+      songsRef.current = merged;
+      return merged;
+    });
+
+    if (typeof window !== "undefined") {
+      try {
+        const existing = readLS("bamsplay_custom_songs", []);
+        const map = new Map();
+        if (Array.isArray(existing)) {
+          existing.forEach((s) => s && s.id && map.set(s.id, s));
+        }
+        valid.forEach((s) => map.set(s.id, s));
+        const trimmed = Array.from(map.values()).slice(-500);
+        window.localStorage.setItem("bamsplay_custom_songs", JSON.stringify(trimmed));
+
+        const activeUser = currentUserRef.current || currentUser;
+        if (activeUser?.email) {
+          const safeEmailKey = activeUser.email.toLowerCase().replace(/[^a-z0-9]/g, "_");
+          window.localStorage.setItem(`bamsplay_data_${safeEmailKey}_custom_songs`, JSON.stringify(trimmed));
+          fetch("/api/auth/sync", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              user: activeUser,
+              playlists: playlistsRef.current || playlists,
+              likedSongIds: likedSongIdsRef.current || likedSongIds || [],
+              customSongs: trimmed,
+            }),
+          }).catch(() => {});
+        }
+      } catch (err) {
+        console.warn("Persist custom songs notice:", err);
+      }
+    }
+  };
+
   // ── localStorage restore + sidebar init (runs once on mount, client-only) ───
   useEffect(() => {
     // Open right lyrics companion sidebar by default on desktop screens
@@ -188,10 +281,23 @@ export function AudioProvider({ children }) {
 
     const storedLiked     = readLS(`${userPrefix}liked_songs`, readLS("bamsplay_liked_songs", []));
     const storedPlaylists = readLS(`${userPrefix}playlists`, readLS("bamsplay_playlists", playlistsData));
+    const storedCustom    = readLS(`${userPrefix}custom_songs`, readLS("bamsplay_custom_songs", []));
     const storedQuality   = readLS("bamsplay_audio_quality", "lossless");
     const storedNorm      = readLS("bamsplay_audio_norm", true);
     const storedNormLvl   = readLS("bamsplay_audio_norm_lvl", "normal");
     const storedPreset    = readLS("bamsplay_eq_preset", "bass_boost");
+
+    // Restore any previously cached/dynamic songs into songs state
+    if (Array.isArray(storedCustom) && storedCustom.length > 0) {
+      setSongs((prev) => {
+        const map = new Map();
+        storedCustom.forEach((s) => s && s.id && map.set(s.id, s));
+        prev.forEach((s) => s && s.id && map.set(s.id, s));
+        const merged = Array.from(map.values());
+        songsRef.current = merged;
+        return merged;
+      });
+    }
 
     // Apply restored values to state
     setLikedSongIds(storedLiked);
@@ -211,12 +317,37 @@ export function AudioProvider({ children }) {
         .then((res) => (res.ok ? res.json() : null))
         .then((cloudData) => {
           if (cloudData && cloudData.found) {
+            if (cloudData.user?.avatar) {
+              setCurrentUser((prev) => {
+                const currentAvatar = prev?.avatar || storedUser?.avatar;
+                if (!currentAvatar || currentAvatar !== cloudData.user.avatar) {
+                  const updated = { ...(prev || storedUser), avatar: cloudData.user.avatar };
+                  currentUserRef.current = updated;
+                  if (typeof window !== "undefined") {
+                    window.localStorage.setItem("bamsplay_current_user", JSON.stringify(updated));
+                    const accounts = readLS("bamsplay_saved_accounts", []);
+                    const updatedAccs = accounts.map((acc) =>
+                      acc.email?.toLowerCase() === updated.email?.toLowerCase()
+                        ? { ...acc, avatar: cloudData.user.avatar }
+                        : acc
+                    );
+                    window.localStorage.setItem("bamsplay_saved_accounts", JSON.stringify(updatedAccs));
+                    setSavedAccounts(updatedAccs);
+                  }
+                  return updated;
+                }
+                return prev;
+              });
+            }
             if (Array.isArray(cloudData.likedSongIds)) {
               setLikedSongIds((prevLiked) => {
                 const merged = Array.from(new Set([...(prevLiked || []), ...cloudData.likedSongIds]));
                 likedSongIdsRef.current = merged;
                 return merged;
               });
+            }
+            if (Array.isArray(cloudData.customSongs) && cloudData.customSongs.length > 0) {
+              registerKnownSong(cloudData.customSongs);
             }
             if (Array.isArray(cloudData.playlists)) {
               setPlaylists((prevPlaylists) => {
@@ -247,6 +378,7 @@ export function AudioProvider({ children }) {
                   window.localStorage.setItem("bamsplay_playlists", JSON.stringify(merged));
                   const userKey = storedUser.email.toLowerCase().replace(/[^a-z0-9]/g, "_");
                   window.localStorage.setItem(`bamsplay_data_${userKey}_playlists`, JSON.stringify(merged));
+                  const currentCustom = readLS("bamsplay_custom_songs", []);
                   fetch("/api/auth/sync", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -254,6 +386,7 @@ export function AudioProvider({ children }) {
                       user: storedUser,
                       playlists: merged,
                       likedSongIds: likedSongIdsRef.current || storedLiked,
+                      customSongs: currentCustom,
                     }),
                   }).catch(() => {});
                 }
@@ -270,6 +403,7 @@ export function AudioProvider({ children }) {
                 user: storedUser,
                 playlists: storedPlaylists,
                 likedSongIds: storedLiked,
+                customSongs: readLS("bamsplay_custom_songs", []),
               }),
             }).catch(() => {});
           }
@@ -293,8 +427,25 @@ export function AudioProvider({ children }) {
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.songs && data.songs.length > 0) {
-          setSongs(data.songs);
-          setQueue(data.songs);
+          setSongs((prev) => {
+            const map = new Map();
+            // 1. Explore songs
+            data.songs.forEach((s) => s && s.id && map.set(s.id, s));
+            // 2. Previously in state (preserves custom songs, liked songs, etc.)
+            prev.forEach((s) => s && s.id && map.set(s.id, s));
+            // 3. Stored custom songs from localStorage
+            const savedCustom = readLS("bamsplay_custom_songs", []);
+            if (Array.isArray(savedCustom)) {
+              savedCustom.forEach((s) => s && s.id && map.set(s.id, s));
+            }
+            const merged = Array.from(map.values());
+            songsRef.current = merged;
+            return merged;
+          });
+          setQueue((prevQ) => {
+            if (prevQ && prevQ.length > 0 && prevQ !== initialSongs) return prevQ;
+            return data.songs;
+          });
           queueRef.current = data.songs;
           if (!isPlayingRef.current && !currentSongRef.current && data.spotlight) {
             setCurrentSong(data.spotlight);
@@ -395,7 +546,7 @@ export function AudioProvider({ children }) {
       } else if (e.key === "l" || e.key === "L") {
         if (currentSong) {
           e.preventDefault();
-          toggleLike(currentSong.id);
+          toggleLike(currentSong);
         }
       } else if ((e.ctrlKey || e.metaKey) && (e.key === "k" || e.key === "K")) {
         e.preventDefault();
@@ -434,6 +585,7 @@ export function AudioProvider({ children }) {
   // Volume Normalization helper (Safe LUFS scaling without Web Audio CORS muting)
   const computeEffectiveVolume = (baseVol, muted, norm, normLvl) => {
     if (muted) return 0;
+    if (isMobileDevice()) return 1.0;
     if (!norm) return baseVol;
     if (normLvl === "loud") return Math.min(1.0, baseVol * 1.25);
     if (normLvl === "quiet") return baseVol * 0.8;
@@ -580,10 +732,10 @@ export function AudioProvider({ children }) {
       audioNormalizationLevel
     );
     if (audioRef.current) {
-      audioRef.current.volume = effVol;
+      audioRef.current.volume = isMobileDevice() ? 1.0 : effVol;
     }
     if (playerEngineRef.current) {
-      playerEngineRef.current.setVolume(isMuted ? 0 : Math.round(effVol * 100));
+      playerEngineRef.current.setVolume(isMuted ? 0 : isMobileDevice() ? 100 : Math.round(effVol * 100));
     }
   }, [volume, isMuted, audioNormalization, audioNormalizationLevel]);
 
@@ -591,19 +743,7 @@ export function AudioProvider({ children }) {
   const playSong = async (song, playlist = null, customContextQueue = null, keepContext = false) => {
     if (!song) return;
 
-    // Deduplicate: If song already exists in catalog (by ID or exact Title+Artist), don't inject duplicate
-    setSongs((prev) => {
-      const exists = prev.some(
-        (s) =>
-          s.id === song.id ||
-          (s.title?.toLowerCase().trim() === song.title?.toLowerCase().trim() &&
-            s.artist?.toLowerCase().trim() === song.artist?.toLowerCase().trim())
-      );
-      if (!exists) {
-        return [...prev, song];
-      }
-      return prev;
-    });
+    registerKnownSong(song);
 
     currentSongRef.current = song;
     setCurrentSong(song);
@@ -618,14 +758,46 @@ export function AudioProvider({ children }) {
 
     if (!keepContext) {
       if (customContextQueue && Array.isArray(customContextQueue) && customContextQueue.length > 0) {
-        setQueue(customContextQueue);
-        queueRef.current = customContextQueue;
+        const ctxSongs = [...customContextQueue];
+        if (playlist) {
+          setCurrentPlaylist(playlist);
+          currentPlaylistRef.current = playlist;
+        }
+        if (isShuffleRef.current) {
+          const remaining = ctxSongs.filter((s) => s.id !== song.id);
+          const shuffled = shuffleArray(remaining);
+          playlistShuffleQueueRef.current = shuffled;
+          playlistPlayedSongIdsRef.current = new Set([song.id]);
+          const newQ = [song, ...shuffled];
+          setQueue(newQ);
+          queueRef.current = newQ;
+        } else {
+          setQueue(ctxSongs);
+          queueRef.current = ctxSongs;
+          playlistShuffleQueueRef.current = [];
+        }
       } else if (playlist) {
         setCurrentPlaylist(playlist);
-        const playlistSongs = songs.filter((s) => playlist.songIds?.includes(s.id));
+        currentPlaylistRef.current = playlist;
+        const pIds =
+          playlist.id === "liked-songs" || playlist.isLikedPlaylist
+            ? (likedSongIdsRef.current || likedSongIds || playlist.songIds || [])
+            : (playlist.songIds || []);
+        const playlistSongs = (songsRef.current || songs).filter((s) => pIds.includes(s.id));
         if (playlistSongs.length > 0) {
-          setQueue(playlistSongs);
-          queueRef.current = playlistSongs;
+          if (isShuffleRef.current) {
+            const remaining = playlistSongs.filter((s) => s.id !== song.id);
+            const shuffled = shuffleArray(remaining);
+            playlistShuffleQueueRef.current = shuffled;
+            playlistPlayedSongIdsRef.current = new Set([song.id]);
+            const newQ = [song, ...shuffled];
+            setQueue(newQ);
+            queueRef.current = newQ;
+          } else {
+            setQueue(playlistSongs);
+            queueRef.current = playlistSongs;
+            playlistShuffleQueueRef.current = [];
+          }
         }
       } else {
         // Ensure current song is present in the playback queue
@@ -698,7 +870,7 @@ export function AudioProvider({ children }) {
         try {
           audioRef.current.src = blobUrl;
           audioRef.current.currentTime = 0;
-          audioRef.current.volume = effVol;
+          audioRef.current.volume = isMobileDevice() ? 1.0 : effVol;
           audioRef.current.play().catch(console.warn);
         } catch (err) {
           console.warn("Offline audio play error:", err);
@@ -731,7 +903,7 @@ export function AudioProvider({ children }) {
         try {
           audioRef.current.src = song.audioUrl;
           audioRef.current.currentTime = 0;
-          audioRef.current.volume = effVol;
+          audioRef.current.volume = isMobileDevice() ? 1.0 : effVol;
           audioRef.current.play().catch(console.warn);
         } catch (err) {
           console.warn("Local audio error:", err);
@@ -786,7 +958,7 @@ export function AudioProvider({ children }) {
         try {
           audioRef.current.src = song.audioUrl;
           audioRef.current.currentTime = 0;
-          audioRef.current.volume = effVol;
+          audioRef.current.volume = isMobileDevice() ? 1.0 : effVol;
           audioRef.current.play().catch((err) => console.warn("Fallback preview playback notice:", err));
           startMasterTicker();
         } catch (_) {}
@@ -928,6 +1100,56 @@ export function AudioProvider({ children }) {
     }
 
     // SPOTIFY PRIORITY 2: Follow regular active playlist / context queue
+    if (isShuffleRef.current) {
+      // 1. Play remaining unplayed tracks from the active playlist shuffle queue
+      if (playlistShuffleQueueRef.current && playlistShuffleQueueRef.current.length > 0) {
+        const nextSong = playlistShuffleQueueRef.current[0];
+        const remainingShuffle = playlistShuffleQueueRef.current.slice(1);
+        playlistShuffleQueueRef.current = remainingShuffle;
+        playlistPlayedSongIdsRef.current.add(nextSong.id);
+
+        const newQueue = [nextSong, ...remainingShuffle];
+        setQueue(newQueue);
+        queueRef.current = newQueue;
+
+        if (currentSongRef.current) {
+          playbackHistoryRef.current.push(currentSongRef.current);
+          setPlaybackHistory([...playbackHistoryRef.current]);
+        }
+
+        playSong(nextSong, currentPlaylistRef.current || currentPlaylist, null, true);
+        return;
+      }
+
+      // 2. All songs in the active playlist/favorite list have finished!
+      // Transition to random songs from the wider catalog
+      const allSongs = songsRef.current || [];
+      if (allSongs.length > 0) {
+        let unplayedSongs = allSongs.filter(
+          (s) => !playlistPlayedSongIdsRef.current.has(s.id) && s.id !== currentSongRef.current?.id
+        );
+        if (unplayedSongs.length === 0) {
+          playlistPlayedSongIdsRef.current = new Set(currentSongRef.current?.id ? [currentSongRef.current.id] : []);
+          unplayedSongs = allSongs.filter((s) => s.id !== currentSongRef.current?.id);
+        }
+        if (unplayedSongs.length === 0) unplayedSongs = allSongs;
+
+        const randomIndex = Math.floor(Math.random() * unplayedSongs.length);
+        const randomSong = unplayedSongs[randomIndex];
+        playlistPlayedSongIdsRef.current.add(randomSong.id);
+
+        if (currentSongRef.current) {
+          playbackHistoryRef.current.push(currentSongRef.current);
+          setPlaybackHistory([...playbackHistoryRef.current]);
+        }
+
+        showToast("Semua lagu playlist telah diputar • Melanjutkan ke lagu acak", "purple");
+        playSong(randomSong, null);
+        return;
+      }
+    }
+
+    // Standard sequential playback (Shuffle is OFF)
     const q = (queueRef.current && queueRef.current.length > 0) ? queueRef.current : (songsRef.current || []);
     if (!q || q.length === 0) return;
 
@@ -941,43 +1163,36 @@ export function AudioProvider({ children }) {
     }
 
     let nextIndex = 0;
-    if (isShuffleRef.current) {
-      nextIndex = Math.floor(Math.random() * q.length);
-      if (q.length > 1 && nextIndex === currentIndex) {
-        nextIndex = (nextIndex + 1) % q.length;
-      }
-    } else {
-      if (currentIndex !== -1 && currentIndex < q.length - 1) {
-        nextIndex = currentIndex + 1;
-      } else if (currentIndex === -1) {
-        // Fallback: If not found in queue, check songsRef index or default to next
-        const allSongs = songsRef.current || [];
-        const songIdx = allSongs.findIndex(
-          (s) =>
-            s.id === currentSongRef.current?.id ||
-            (s.title?.toLowerCase().trim() === currentSongRef.current?.title?.toLowerCase().trim() &&
-              s.artist?.toLowerCase().trim() === currentSongRef.current?.artist?.toLowerCase().trim())
-        );
-        if (songIdx !== -1 && songIdx < allSongs.length - 1) {
-          if (currentSongRef.current) {
-            playbackHistoryRef.current.push(currentSongRef.current);
-            setPlaybackHistory([...playbackHistoryRef.current]);
-          }
-          playSong(allSongs[songIdx + 1], currentPlaylist);
-          return;
+    if (currentIndex !== -1 && currentIndex < q.length - 1) {
+      nextIndex = currentIndex + 1;
+    } else if (currentIndex === -1) {
+      // Fallback: If not found in queue, check songsRef index or default to next
+      const allSongs = songsRef.current || [];
+      const songIdx = allSongs.findIndex(
+        (s) =>
+          s.id === currentSongRef.current?.id ||
+          (s.title?.toLowerCase().trim() === currentSongRef.current?.title?.toLowerCase().trim() &&
+            s.artist?.toLowerCase().trim() === currentSongRef.current?.artist?.toLowerCase().trim())
+      );
+      if (songIdx !== -1 && songIdx < allSongs.length - 1) {
+        if (currentSongRef.current) {
+          playbackHistoryRef.current.push(currentSongRef.current);
+          setPlaybackHistory([...playbackHistoryRef.current]);
         }
+        playSong(allSongs[songIdx + 1], currentPlaylistRef.current || currentPlaylist);
+        return;
+      }
+      nextIndex = 0;
+    } else {
+      if (repeatModeRef.current === "all") {
         nextIndex = 0;
       } else {
-        if (repeatModeRef.current === "all") {
-          nextIndex = 0;
-        } else {
-          // Reached end of context queue and repeat is off
-          isPlayingRef.current = false;
-          setIsPlaying(false);
-          stopMasterTicker();
-          seek(0);
-          return;
-        }
+        // Reached end of context queue and repeat is off
+        isPlayingRef.current = false;
+        setIsPlaying(false);
+        stopMasterTicker();
+        seek(0);
+        return;
       }
     }
 
@@ -986,7 +1201,7 @@ export function AudioProvider({ children }) {
       setPlaybackHistory([...playbackHistoryRef.current]);
     }
 
-    playSong(q[nextIndex], currentPlaylist);
+    playSong(q[nextIndex], currentPlaylistRef.current || currentPlaylist);
   };
 
   // Previous Track (Spotify History & Playlist rewind)
@@ -1000,7 +1215,15 @@ export function AudioProvider({ children }) {
     if (playbackHistoryRef.current && playbackHistoryRef.current.length > 0) {
       const prevSong = playbackHistoryRef.current.pop();
       setPlaybackHistory([...playbackHistoryRef.current]);
-      playSong(prevSong, null, null, true);
+
+      if (isShuffleRef.current && currentSongRef.current) {
+        playlistShuffleQueueRef.current = [currentSongRef.current, ...playlistShuffleQueueRef.current];
+        const newQueue = [prevSong, ...playlistShuffleQueueRef.current];
+        setQueue(newQueue);
+        queueRef.current = newQueue;
+      }
+
+      playSong(prevSong, currentPlaylistRef.current || currentPlaylist, null, true);
       return;
     }
 
@@ -1021,7 +1244,7 @@ export function AudioProvider({ children }) {
       prevIndex = currentIndex - 1;
     }
 
-    playSong(q[prevIndex], currentPlaylist);
+    playSong(q[prevIndex], currentPlaylistRef.current || currentPlaylist);
   };
 
   // Handle Track Ended
@@ -1110,31 +1333,39 @@ export function AudioProvider({ children }) {
 
   // Like / Save Song (Favorites)
   const toggleLike = (songOrId) => {
-    const songId = typeof songOrId === "object" ? songOrId.id : songOrId;
-    const songObj = typeof songOrId === "object" ? songOrId : songs.find((s) => s.id === songId);
+    const songId = typeof songOrId === "object" ? songOrId?.id : songOrId;
+    let songObj = typeof songOrId === "object" ? songOrId : (songsRef.current || songs).find((s) => s.id === songId);
 
-    // If dynamic song from search or cloud catalog, ensure it exists in songs state
+    // If songObj is present, register it permanently
     if (songObj) {
-      setSongs((prev) => {
-        if (!prev.find((s) => s.id === songObj.id)) {
-          return [songObj, ...prev];
-        }
-        return prev;
-      });
+      registerKnownSong(songObj);
+    } else if (songId) {
+      // Self-heal: fetch song metadata from API by ID
+      fetch(`/api/music/search?id=${encodeURIComponent(songId)}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.songs && data.songs.length > 0) {
+            registerKnownSong(data.songs[0]);
+          }
+        })
+        .catch(() => {});
     }
 
     setLikedSongIds((prev) => {
       const isLiked = prev.includes(songId);
-      const next = isLiked ? prev.filter((id) => id !== songId) : [...prev, songId];
-      
-      // Update Liked Songs Playlist
-      setPlaylists((plist) =>
-        plist.map((p) =>
+      const next = isLiked ? prev.filter((id) => id !== songId) : [songId, ...prev];
+      likedSongIdsRef.current = next;
+
+      // Update Liked Songs Playlist in state and ref
+      setPlaylists((plist) => {
+        const updated = plist.map((p) =>
           p.id === "liked-songs"
             ? { ...p, totalSongs: next.length, songIds: next }
             : p
-        )
-      );
+        );
+        playlistsRef.current = updated;
+        return updated;
+      });
 
       showToast(
         isLiked ? "Dihapus dari Lagu Favorit" : "Disimpan ke Lagu Favorit",
@@ -1146,8 +1377,77 @@ export function AudioProvider({ children }) {
 
   // Shuffle & Repeat
   const toggleShuffle = () => {
-    setIsShuffle((prev) => !prev);
-    showToast(!isShuffle ? "Acak aktif" : "Acak nonaktif", "default");
+    setIsShuffle((prev) => {
+      const next = !prev;
+      isShuffleRef.current = next;
+
+      if (next) {
+        const currentPl = currentPlaylistRef.current || currentPlaylist;
+        let contextSongs = [];
+        if (currentPl) {
+          const pIds =
+            currentPl.id === "liked-songs" || currentPl.isLikedPlaylist
+              ? (likedSongIdsRef.current || likedSongIds || currentPl.songIds || [])
+              : (currentPl.songIds || []);
+          const currentCatalog = songsRef.current || songs;
+          contextSongs = pIds.map((id) => currentCatalog.find((s) => s.id === id)).filter(Boolean);
+        } else if (queueRef.current && queueRef.current.length > 1) {
+          contextSongs = queueRef.current;
+        }
+
+        if (contextSongs.length > 0 && currentSongRef.current) {
+          const remaining = contextSongs.filter(
+            (s) => s.id !== currentSongRef.current?.id && !playlistPlayedSongIdsRef.current?.has(s.id)
+          );
+          const pool = remaining.length > 0 ? remaining : contextSongs.filter((s) => s.id !== currentSongRef.current?.id);
+          const shuffled = shuffleArray(pool);
+          playlistShuffleQueueRef.current = shuffled;
+          playlistPlayedSongIdsRef.current.add(currentSongRef.current.id);
+          const newQ = [currentSongRef.current, ...shuffled];
+          setQueue(newQ);
+          queueRef.current = newQ;
+        }
+        showToast("Putar acak playlist diaktifkan", "purple");
+      } else {
+        playlistShuffleQueueRef.current = [];
+        const currentPl = currentPlaylistRef.current || currentPlaylist;
+        if (currentPl) {
+          const pIds =
+            currentPl.id === "liked-songs" || currentPl.isLikedPlaylist
+              ? (likedSongIdsRef.current || likedSongIds || currentPl.songIds || [])
+              : (currentPl.songIds || []);
+          const currentCatalog = songsRef.current || songs;
+          const naturalSongs = pIds.map((id) => currentCatalog.find((s) => s.id === id)).filter(Boolean);
+          if (naturalSongs.length > 0) {
+            setQueue(naturalSongs);
+            queueRef.current = naturalSongs;
+          }
+        }
+        showToast("Putar acak dinonaktifkan", "default");
+      }
+
+      return next;
+    });
+  };
+
+  const playShufflePlaylist = (playlist, songList = null) => {
+    let list = songList && songList.length > 0 ? songList : [];
+    if (list.length === 0 && playlist) {
+      const pIds =
+        playlist.id === "liked-songs" || playlist.isLikedPlaylist
+          ? (likedSongIdsRef.current || likedSongIds || playlist.songIds || [])
+          : (playlist.songIds || []);
+      const currentCatalog = songsRef.current || songs;
+      list = pIds.map((id) => currentCatalog.find((s) => s.id === id)).filter(Boolean);
+    }
+    if (!list || list.length === 0) return;
+
+    setIsShuffle(true);
+    isShuffleRef.current = true;
+    const randomIndex = Math.floor(Math.random() * list.length);
+    const startSong = list[randomIndex];
+    playSong(startSong, playlist, list);
+    showToast(`Memutar acak: ${playlist?.title || "Playlist"}`, "purple");
   };
 
   const toggleRepeat = () => {
@@ -1322,25 +1622,40 @@ export function AudioProvider({ children }) {
 
   // Add song to playlist
   const addSongToPlaylist = (songOrId, playlistId) => {
-    const songId = typeof songOrId === "object" ? songOrId.id : songOrId;
-    const songObj = typeof songOrId === "object" ? songOrId : songs.find((s) => s.id === songId);
+    const songId = typeof songOrId === "object" ? songOrId?.id : songOrId;
+    let songObj = typeof songOrId === "object" ? songOrId : (songsRef.current || songs).find((s) => s.id === songId);
 
     if (songObj) {
-      setSongs((prev) => {
-        if (!prev.find((s) => s.id === songObj.id)) {
-          return [songObj, ...prev];
-        }
-        return prev;
-      });
+      registerKnownSong(songObj);
+    } else if (songId) {
+      fetch(`/api/music/search?id=${encodeURIComponent(songId)}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.songs && data.songs.length > 0) {
+            registerKnownSong(data.songs[0]);
+          }
+        })
+        .catch(() => {});
     }
 
-    let targetPlaylistTitle = "";
-    let alreadyInPlaylist = false;
+    // Special case: If user adds to "liked-songs", redirect cleanly to toggleLike
+    if (playlistId === "liked-songs") {
+      const isLiked = (likedSongIdsRef.current || likedSongIds || []).includes(songId);
+      if (!isLiked) {
+        toggleLike(songObj || songId);
+      } else {
+        showToast('Lagu sudah ada di playlist "Lagu Favorit"', "default");
+      }
+      return;
+    }
+
+    const targetPlaylist = (playlistsRef.current || playlists || []).find((p) => p.id === playlistId);
+    const targetPlaylistTitle = targetPlaylist?.title || "Playlist";
+    let alreadyInPlaylist = (targetPlaylist?.songIds || []).includes(songId);
 
     setPlaylists((prev) => {
       const nextPlaylists = prev.map((pl) => {
         if (pl.id === playlistId) {
-          targetPlaylistTitle = pl.title;
           const currentIds = pl.songIds || [];
           if (currentIds.includes(songId)) {
             alreadyInPlaylist = true;
@@ -1362,6 +1677,7 @@ export function AudioProvider({ children }) {
         if (activeUser?.email) {
           const safeEmailKey = activeUser.email.toLowerCase().replace(/[^a-z0-9]/g, "_");
           window.localStorage.setItem(`bamsplay_data_${safeEmailKey}_playlists`, JSON.stringify(nextPlaylists));
+          const currentCustom = readLS("bamsplay_custom_songs", []);
           fetch("/api/auth/sync", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -1369,6 +1685,7 @@ export function AudioProvider({ children }) {
               user: activeUser,
               playlists: nextPlaylists,
               likedSongIds: likedSongIdsRef.current || likedSongIds || [],
+              customSongs: currentCustom,
             }),
           }).catch(() => {});
         }
@@ -1379,19 +1696,28 @@ export function AudioProvider({ children }) {
     });
 
     if (alreadyInPlaylist) {
-      showToast(`Lagu sudah ada di "${targetPlaylistTitle}"`, "default");
+      showToast(`Lagu sudah ada di playlist "${targetPlaylistTitle}"`, "default");
     } else {
-      showToast(`Ditambahkan ke "${targetPlaylistTitle}"`, "purple");
+      showToast(`Lagu telah ditambahkan ke playlist "${targetPlaylistTitle}"`, "purple");
     }
   };
 
   // Remove song from playlist
   const removeSongFromPlaylist = (songId, playlistId) => {
-    let targetPlaylistTitle = "";
+    if (playlistId === "liked-songs") {
+      const isLiked = (likedSongIdsRef.current || likedSongIds || []).includes(songId);
+      if (isLiked) {
+        toggleLike(songId);
+      }
+      return;
+    }
+
+    const targetPlaylist = (playlistsRef.current || playlists || []).find((p) => p.id === playlistId);
+    const targetPlaylistTitle = targetPlaylist?.title || "Playlist";
+
     setPlaylists((prev) => {
       const nextPlaylists = prev.map((pl) => {
         if (pl.id === playlistId) {
-          targetPlaylistTitle = pl.title;
           const nextIds = (pl.songIds || []).filter((id) => id !== songId);
           return {
             ...pl,
@@ -1408,6 +1734,7 @@ export function AudioProvider({ children }) {
         if (activeUser?.email) {
           const safeEmailKey = activeUser.email.toLowerCase().replace(/[^a-z0-9]/g, "_");
           window.localStorage.setItem(`bamsplay_data_${safeEmailKey}_playlists`, JSON.stringify(nextPlaylists));
+          const currentCustom = readLS("bamsplay_custom_songs", []);
           fetch("/api/auth/sync", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -1415,6 +1742,7 @@ export function AudioProvider({ children }) {
               user: activeUser,
               playlists: nextPlaylists,
               likedSongIds: likedSongIdsRef.current || likedSongIds || [],
+              customSongs: currentCustom,
             }),
           }).catch(() => {});
         }
@@ -1423,7 +1751,7 @@ export function AudioProvider({ children }) {
       playlistsRef.current = nextPlaylists;
       return nextPlaylists;
     });
-    showToast(`Dihapus dari "${targetPlaylistTitle}"`, "default");
+    showToast(`Lagu dihapus dari playlist "${targetPlaylistTitle}"`, "default");
   };
 
   // Create Playlist (Always appends to existing playlists, never replaces)
@@ -1432,12 +1760,7 @@ export function AudioProvider({ children }) {
     const initialSongIds = initialSong ? [initialSong.id] : [];
 
     if (initialSong) {
-      setSongs((prev) => {
-        if (!prev.find((s) => s.id === initialSong.id)) {
-          return [initialSong, ...prev];
-        }
-        return prev;
-      });
+      registerKnownSong(initialSong);
     }
 
     const currentPlCount = (playlistsRef.current || playlists || []).filter((p) => p.id !== "liked-songs").length;
@@ -1722,14 +2045,24 @@ export function AudioProvider({ children }) {
 
     let userLiked = readLS(`${userPrefix}liked_songs`, null);
     let userPlaylists = readLS(`${userPrefix}playlists`, null);
+    let userCustom = readLS(`${userPrefix}custom_songs`, null);
+    if (Array.isArray(userCustom) && userCustom.length > 0) {
+      registerKnownSong(userCustom);
+    }
 
     try {
       const res = await fetch(`/api/auth/sync?email=${encodeURIComponent(cleanEmail)}`);
       if (res.ok) {
         const cloudData = await res.json();
         if (cloudData && cloudData.found) {
+          if (cloudData.user?.avatar && !newUser.avatar) {
+            newUser.avatar = cloudData.user.avatar;
+          }
           if (Array.isArray(cloudData.likedSongIds)) {
             userLiked = Array.from(new Set([...(userLiked || []), ...cloudData.likedSongIds]));
+          }
+          if (Array.isArray(cloudData.customSongs) && cloudData.customSongs.length > 0) {
+            registerKnownSong(cloudData.customSongs);
           }
           if (Array.isArray(cloudData.playlists)) {
             const map = new Map();
@@ -1774,6 +2107,7 @@ export function AudioProvider({ children }) {
         user: newUser,
         playlists: finalPlaylists,
         likedSongIds: finalLiked,
+        customSongs: readLS("bamsplay_custom_songs", []),
       }),
     }).catch(() => {});
 
@@ -2144,6 +2478,8 @@ export function AudioProvider({ children }) {
         toggleMute,
         toggleLike,
         toggleShuffle,
+        setIsShuffle,
+        playShufflePlaylist,
         toggleRepeat,
         addToQueue,
         removeFromQueue,
@@ -2156,6 +2492,7 @@ export function AudioProvider({ children }) {
         goBack,
         goForward,
         createNewPlaylist,
+        registerKnownSong,
         addLocalSongs,
         updateSongLyrics,
         openOfficialVideo,

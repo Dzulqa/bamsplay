@@ -8,8 +8,19 @@ import { useAudio } from "@/context/AudioContext";
  * Pure headless background audio engine.
  * Streams full studio recording from start to finish completely in the background.
  * Zero YouTube visual UI or docks shown — 100% native Bamsplay feel.
- * Automatically enforces 144p ("tiny") lowest resolution for bandwidth efficiency.
+ * Automatically enforces highest bitrate background audio.
  */
+const isMobileDevice = () => {
+  if (typeof window === "undefined") return false;
+  return (
+    window.innerWidth <= 768 ||
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+    window.Capacitor !== undefined ||
+    window.location.protocol === "capacitor:" ||
+    (typeof navigator !== "undefined" && navigator.maxTouchPoints > 1)
+  );
+};
+
 export default function GlobalAudioEngine() {
   const {
     currentSong,
@@ -57,48 +68,54 @@ export default function GlobalAudioEngine() {
   const computeMasterVol = () => {
     if (isMuted) return 0;
 
+    // Mobile / Capacitor APK check: Phone hardware volume rocker governs output power.
+    // Setting internal volume to 100 ensures mobile phones achieve full, loud, crisp speaker volume!
+    if (isMobileDevice()) {
+      return 100;
+    }
+
     let multiplier = 1.0;
 
     // 1. Bitrate & Quality Profile
     if (audioQuality === "lossless") {
       multiplier *= 1.15; // 320kbps full dynamic master loudness
     } else if (audioQuality === "high") {
-      multiplier *= 1.0;  // 160kbps balanced
+      multiplier *= 1.05; // 160kbps balanced
     } else if (audioQuality === "normal") {
-      multiplier *= 0.85; // 96kbps standard
+      multiplier *= 1.0;  // 96kbps standard
     } else if (audioQuality === "low") {
-      multiplier *= 0.58; // 24kbps data-saver capped loudness
+      multiplier *= 0.80; // 24kbps
     } else {
       multiplier *= 1.0;
     }
 
     // 2. Equalizer DSP Acoustic Presence
     if (equalizerPreset === "bass_boost") {
-      multiplier *= 1.14; // punchy heavy sub-bass drive
+      multiplier *= 1.14;
     } else if (equalizerPreset === "rock") {
-      multiplier *= 1.18; // maximum aggressive drive
+      multiplier *= 1.18;
     } else if (equalizerPreset === "vocal") {
-      multiplier *= 1.08; // speech & vocal articulation focus
+      multiplier *= 1.10;
     } else if (equalizerPreset === "pop") {
-      multiplier *= 1.04; // bouncy smile curve
+      multiplier *= 1.05;
     } else if (equalizerPreset === "acoustic") {
-      multiplier *= 0.86; // soft organic headroom
+      multiplier *= 0.95;
     } else if (equalizerPreset === "flat") {
-      multiplier *= 0.95; // flat reference
+      multiplier *= 1.0;
     }
 
     // 3. Spotify Volume Normalization
     if (audioNormalization) {
       if (audioNormalizationLevel === "loud") {
-        multiplier *= 1.18;
+        multiplier *= 1.20;
       } else if (audioNormalizationLevel === "quiet") {
-        multiplier *= 0.70;
+        multiplier *= 0.85;
       } else {
-        multiplier *= 0.90; // normal target
+        multiplier *= 1.0; // normal target
       }
     }
 
-    return Math.max(5, Math.min(100, Math.round(volume * multiplier * 100)));
+    return Math.max(10, Math.min(100, Math.round(volume * multiplier * 100)));
   };
 
   // Real-time audio engine adaptation to quality, EQ and normalization changes
@@ -219,7 +236,7 @@ export default function GlobalAudioEngine() {
           enablejsapi: 1,
           origin: typeof window !== "undefined" ? window.location.origin : undefined,
           iv_load_policy: 3,
-          vq: "tiny", // Request 144p lowest resolution at initial handshake
+          vq: "medium", // Request standard medium resolution for optimal 160kbps audio bitrate
         },
         events: {
           onReady: (event) => {
@@ -239,7 +256,7 @@ export default function GlobalAudioEngine() {
                 event.target.loadVideoById({
                   videoId: pendingId,
                   startSeconds: 0,
-                  suggestedQuality: "tiny",
+                  suggestedQuality: "medium",
                 });
                 event.target.playVideo();
                 startTimeSync();
@@ -252,7 +269,7 @@ export default function GlobalAudioEngine() {
             if (event.data === window.YT.PlayerState.PLAYING) {
               try {
                 event.target.unMute();
-                const vol = isMutedRef.current ? 0 : Math.round(volumeRef.current * 100);
+                const vol = computeMasterVol();
                 event.target.setVolume(vol);
               } catch (_) {}
               setIsPlaying(true);
@@ -339,9 +356,7 @@ export default function GlobalAudioEngine() {
                 ? "highres"
                 : audioQuality === "high"
                 ? "hd720"
-                : audioQuality === "normal"
-                ? "medium"
-                : "tiny";
+                : "medium";
 
             playerRef.current.loadVideoById({
               videoId: ytId,
@@ -384,7 +399,7 @@ export default function GlobalAudioEngine() {
                 playerRef.current.loadVideoById({
                   videoId: curYt,
                   startSeconds: 0,
-                  suggestedQuality: "tiny",
+                  suggestedQuality: "medium",
                 });
               }
             } else if (typeof playerRef.current.playVideo === "function") {
@@ -429,16 +444,6 @@ export default function GlobalAudioEngine() {
       },
     });
   }, [isPlayerReady, registerPlayerEngine, setIsPlaying, setCurrentTime, setDuration]);
-
-  // Sync volume adjustments
-  useEffect(() => {
-    if (playerRef.current && typeof playerRef.current.setVolume === "function") {
-      const vol = isMuted ? 0 : Math.round(volume * 100);
-      try {
-        playerRef.current.setVolume(vol);
-      } catch (_) {}
-    }
-  }, [volume, isMuted]);
 
   // 100% Invisible background container:
   // Placed at bottom-right viewport behind the PlayerBar (zIndex 50).

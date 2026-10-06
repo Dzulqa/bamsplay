@@ -21,9 +21,6 @@ import {
   Minimize2,
   Sliders,
   Sparkles,
-  ArrowDownToLine,
-  CheckCircle2,
-  Loader2,
 } from "lucide-react";
 
 export default function PlayerBar() {
@@ -37,10 +34,6 @@ export default function PlayerBar() {
     isShuffle,
     repeatMode,
     likedSongIds,
-    downloadedSongIds,
-    downloadingMap,
-    downloadSong,
-    removeDownloadedSong,
     activeView,
     activeViewData,
     queue,
@@ -74,8 +67,6 @@ export default function PlayerBar() {
   if (!currentSong) return null;
 
   const isLiked = likedSongIds?.includes(currentSong.id);
-  const isDownloaded = downloadedSongIds?.includes(currentSong?.id);
-  const isDownloading = !!downloadingMap?.[currentSong?.id];
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   const formatTime = (secs) => {
@@ -158,36 +149,6 @@ export default function PlayerBar() {
               title="Tambahkan ke Playlist"
             >
               <ListPlus className="w-5 h-5" />
-            </button>
-
-            <button
-              onClick={() =>
-                isDownloaded
-                  ? removeDownloadedSong(currentSong.id)
-                  : downloadSong(currentSong)
-              }
-              className={`p-1.5 transition-colors ${
-                isDownloaded
-                  ? "text-emerald-400"
-                  : isDownloading
-                  ? "text-purple-400 animate-spin"
-                  : "text-[#9a91b4] hover:text-white"
-              }`}
-              title={
-                isDownloaded
-                  ? "Terunduh untuk offline (Klik untuk hapus)"
-                  : isDownloading
-                  ? "Sedang mengunduh..."
-                  : "Unduh Lagu Offline"
-              }
-            >
-              {isDownloading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : isDownloaded ? (
-                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-              ) : (
-                <ArrowDownToLine className="w-5 h-5" />
-              )}
             </button>
 
             <button
@@ -290,36 +251,6 @@ export default function PlayerBar() {
               title="Tambahkan ke Playlist"
             >
               <ListPlus className="w-4 h-4" />
-            </button>
-
-            <button
-              onClick={() =>
-                isDownloaded
-                  ? removeDownloadedSong(currentSong.id)
-                  : downloadSong(currentSong)
-              }
-              className={`p-1.5 transition-colors focus:outline-none ${
-                isDownloaded
-                  ? "text-emerald-400 hover:text-emerald-300"
-                  : isDownloading
-                  ? "text-purple-400"
-                  : "text-[#9d94b8] hover:text-white"
-              }`}
-              title={
-                isDownloaded
-                  ? "Tersimpan offline (Klik untuk hapus)"
-                  : isDownloading
-                  ? "Sedang mengunduh lagu..."
-                  : "Unduh Lagu (Putar Offline)"
-              }
-            >
-              {isDownloading ? (
-                <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
-              ) : isDownloaded ? (
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              ) : (
-                <ArrowDownToLine className="w-4 h-4" />
-              )}
             </button>
           </div>
         </div>
