@@ -13,6 +13,8 @@ import {
   FolderUp,
   Music,
   ArrowDownToLine,
+  Trash2,
+  Edit3,
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -22,6 +24,8 @@ export default function Sidebar() {
     activeViewData,
     navigateTo,
     setIsCreatePlaylistModalOpen,
+    openDeletePlaylistModal,
+    openEditPlaylistModal,
     likedSongIds,
     downloadedSongIds,
     downloadStats,
@@ -245,45 +249,74 @@ export default function Sidebar() {
                 <div
                   key={pl.id}
                   onClick={() => navigateTo("playlist", { playlistId: pl.id })}
-                  className={`flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors ${isSelected
+                  className={`group flex items-center justify-between gap-2 p-2 rounded-md cursor-pointer transition-colors ${isSelected
                     ? "bg-purple-600/25 text-white"
                     : "hover:bg-white/[0.04] text-[#c8c2dc]"
                     } ${isSidebarCollapsed ? "justify-center p-1.5" : ""}`}
                   title={pl.title}
                 >
-                  {pl.cover?.startsWith("http") ? (
-                    <img
-                      src={pl.cover}
-                      alt={pl.title}
-                      onError={(e) => {
-                        e.currentTarget.onerror = null;
-                        e.currentTarget.src = "/default-cover.svg";
-                      }}
-                      className="w-10 h-10 rounded-md object-cover shrink-0 shadow-sm"
-                    />
-                  ) : (
-                    <div
-                      style={{
-                        background:
-                          pl.cover ||
-                          "linear-gradient(135deg, #6366f1 0%, #4c1d95 100%)",
-                      }}
-                      className="w-10 h-10 rounded-md flex items-center justify-center shrink-0 shadow-sm text-white"
-                    >
-                      <Music className="w-4 h-4 text-purple-200" />
-                    </div>
-                  )}
-                  {!isSidebarCollapsed && (
-                    <div className="min-w-0 flex-1">
-                      <span
-                        className={`font-semibold text-xs truncate block ${isSelected ? "text-purple-300 font-bold" : "text-white"
-                          }`}
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    {pl.cover?.startsWith("http") ? (
+                      <img
+                        src={pl.cover}
+                        alt={pl.title}
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = "/default-cover.svg";
+                        }}
+                        className="w-10 h-10 rounded-md object-cover shrink-0 shadow-sm"
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          background:
+                            pl.cover ||
+                            "linear-gradient(135deg, #6366f1 0%, #4c1d95 100%)",
+                        }}
+                        className="w-10 h-10 rounded-md flex items-center justify-center shrink-0 shadow-sm text-white"
                       >
-                        {pl.title}
-                      </span>
-                      <span className="text-[11px] text-[#8e85a6] truncate block">
-                        {pl.songIds ? `${pl.songIds.length} lagu` : "Daftar Putar"}
-                      </span>
+                        <Music className="w-4 h-4 text-purple-200" />
+                      </div>
+                    )}
+                    {!isSidebarCollapsed && (
+                      <div className="min-w-0 flex-1">
+                        <span
+                          className={`font-semibold text-xs truncate block ${isSelected ? "text-purple-300 font-bold" : "text-white"
+                            }`}
+                        >
+                          {pl.title}
+                        </span>
+                        <span className="text-[11px] text-[#8e85a6] truncate block">
+                          {pl.songIds ? `${pl.songIds.length} lagu` : "Daftar Putar"}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {!isSidebarCollapsed && (
+                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openEditPlaylistModal(pl);
+                        }}
+                        className="p-1 rounded text-[#9a91b4] hover:text-purple-300 hover:bg-purple-900/40 transition-colors cursor-pointer"
+                        title="Edit Playlist"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openDeletePlaylistModal(pl);
+                        }}
+                        className="p-1 rounded text-[#9a91b4] hover:text-rose-400 hover:bg-rose-500/15 transition-colors cursor-pointer"
+                        title="Hapus Playlist"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   )}
                 </div>

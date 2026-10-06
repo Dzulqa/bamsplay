@@ -18,6 +18,7 @@ import {
   ArrowDownToLine,
   CheckCircle2,
   Loader2,
+  Edit3,
 } from "lucide-react";
 
 export default function PlaylistView() {
@@ -40,6 +41,8 @@ export default function PlaylistView() {
     showToast,
     openAddToPlaylistModal,
     removeSongFromPlaylist,
+    openDeletePlaylistModal,
+    openEditPlaylistModal,
     isSidebarCollapsed,
     isRightSidebarOpen,
     activeView,
@@ -196,6 +199,29 @@ export default function PlaylistView() {
           >
             <Share2 className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
+
+          {/* Edit & Delete for Custom User Playlists */}
+          {!isLikedView && playlist.id !== "liked-songs" && (
+            <>
+              <button
+                onClick={() => openEditPlaylistModal(playlist)}
+                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border border-purple-500/30 text-purple-300 hover:text-white hover:bg-purple-600/20 hover:border-purple-500/60 transition-all cursor-pointer shadow-sm"
+                title="Edit Nama & Deskripsi"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Edit</span>
+              </button>
+
+              <button
+                onClick={() => openDeletePlaylistModal(playlist)}
+                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border border-rose-500/30 text-rose-300/80 hover:text-white hover:bg-rose-600/20 hover:border-rose-500/60 transition-all cursor-pointer shadow-sm"
+                title="Hapus Playlist Ini"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                <span className="hidden sm:inline">Hapus</span>
+              </button>
+            </>
+          )}
         </div>
 
         {/* Search within playlist */}

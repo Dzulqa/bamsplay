@@ -72,6 +72,10 @@ export function AudioProvider({ children }) {
   const [isDeviceModalOpen, setIsDeviceModalOpen] = useState(false);
   const [isAudioQualityModalOpen, setIsAudioQualityModalOpen] = useState(false);
   const [isCreatePlaylistModalOpen, setIsCreatePlaylistModalOpen] = useState(false);
+  const [playlistToDelete, setPlaylistToDelete] = useState(null);
+  const [isDeletePlaylistModalOpen, setIsDeletePlaylistModalOpen] = useState(false);
+  const [playlistToEdit, setPlaylistToEdit] = useState(null);
+  const [isEditPlaylistModalOpen, setIsEditPlaylistModalOpen] = useState(false);
   const [isAddToPlaylistModalOpen, setIsAddToPlaylistModalOpen] = useState(false);
   const [selectedSongForPlaylist, setSelectedSongForPlaylist] = useState(null);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
@@ -138,12 +142,26 @@ export function AudioProvider({ children }) {
 
   useEffect(() => {
     playbackHistoryRef.current = playbackHistory;
-  }, [playbackHistory]);
-
-  const songsRef = useRef(songs);
+  }, [playbackHistory]);  const songsRef = useRef(songs);
   useEffect(() => {
     songsRef.current = songs;
   }, [songs]);
+
+  const playlistsRef = useRef(playlistsData);
+  const currentUserRef = useRef(null);
+  const likedSongIdsRef = useRef([]);
+
+  useEffect(() => {
+    playlistsRef.current = playlists;
+  }, [playlists]);
+
+  useEffect(() => {
+    currentUserRef.current = currentUser;
+  }, [currentUser]);
+
+  useEffect(() => {
+    likedSongIdsRef.current = likedSongIds;
+  }, [likedSongIds]);
 
   // ── localStorage restore + sidebar init (runs once on mount, client-only) ───
   useEffect(() => {
@@ -160,6 +178,7 @@ export function AudioProvider({ children }) {
     };
     const storedUser = readLS("bamsplay_current_user", defaultUser);
     setCurrentUser(storedUser);
+    currentUserRef.current = storedUser;
 
     const storedAccounts = readLS("bamsplay_saved_accounts", storedUser ? [storedUser] : [defaultUser]);
     setSavedAccounts(storedAccounts);
@@ -176,7 +195,9 @@ export function AudioProvider({ children }) {
 
     // Apply restored values to state
     setLikedSongIds(storedLiked);
+    likedSongIdsRef.current = storedLiked;
     setPlaylists(storedPlaylists);
+    playlistsRef.current = storedPlaylists;
     setAudioQualityState(storedQuality);
     setAudioNormalizationState(storedNorm);
     setAudioNormalizationLevelState(storedNormLvl);
@@ -191,10 +212,54 @@ export function AudioProvider({ children }) {
         .then((cloudData) => {
           if (cloudData && cloudData.found) {
             if (Array.isArray(cloudData.likedSongIds)) {
-              setLikedSongIds(cloudData.likedSongIds);
+              setLikedSongIds((prevLiked) => {
+                const merged = Array.from(new Set([...(prevLiked || []), ...cloudData.likedSongIds]));
+                likedSongIdsRef.current = merged;
+                return merged;
+              });
             }
-            if (Array.isArray(cloudData.playlists) && cloudData.playlists.length > 0) {
-              setPlaylists(cloudData.playlists);
+            if (Array.isArray(cloudData.playlists)) {
+              setPlaylists((prevPlaylists) => {
+                const map = new Map();
+                const likedPl = (prevPlaylists || []).find((p) => p.id === "liked-songs") ||
+                  cloudData.playlists.find((p) => p.id === "liked-songs") ||
+                  playlistsData[0];
+                map.set("liked-songs", likedPl);
+
+                // Add cloud custom playlists
+                cloudData.playlists.forEach((p) => {
+                  if (p && p.id && p.id !== "liked-songs") {
+                    map.set(p.id, p);
+                  }
+                });
+
+                // Add local custom playlists (local takes priority and will NOT be deleted)
+                (prevPlaylists || []).forEach((p) => {
+                  if (p && p.id && p.id !== "liked-songs") {
+                    map.set(p.id, p);
+                  }
+                });
+
+                const merged = Array.from(map.values());
+                playlistsRef.current = merged;
+
+                if (typeof window !== "undefined") {
+                  window.localStorage.setItem("bamsplay_playlists", JSON.stringify(merged));
+                  const userKey = storedUser.email.toLowerCase().replace(/[^a-z0-9]/g, "_");
+                  window.localStorage.setItem(`bamsplay_data_${userKey}_playlists`, JSON.stringify(merged));
+                  fetch("/api/auth/sync", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      user: storedUser,
+                      playlists: merged,
+                      likedSongIds: likedSongIdsRef.current || storedLiked,
+                    }),
+                  }).catch(() => {});
+                }
+
+                return merged;
+              });
             }
           } else {
             // First time saving initial user data to server
@@ -248,16 +313,17 @@ export function AudioProvider({ children }) {
     if (!hasRestoredRef.current) return;
     if (typeof window === "undefined") return;
     window.localStorage.setItem("bamsplay_liked_songs", JSON.stringify(likedSongIds));
-    if (currentUser?.email) {
-      const safeEmailKey = currentUser.email.toLowerCase().replace(/[^a-z0-9]/g, "_");
+    const activeUser = currentUserRef.current || currentUser;
+    if (activeUser?.email) {
+      const safeEmailKey = activeUser.email.toLowerCase().replace(/[^a-z0-9]/g, "_");
       window.localStorage.setItem(`bamsplay_data_${safeEmailKey}_liked_songs`, JSON.stringify(likedSongIds));
       // Cloud sync
       fetch("/api/auth/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          user: currentUser,
-          playlists,
+          user: activeUser,
+          playlists: playlistsRef.current || playlists,
           likedSongIds,
         }),
       }).catch(() => {});
@@ -269,17 +335,18 @@ export function AudioProvider({ children }) {
     if (!hasRestoredRef.current) return;
     if (typeof window === "undefined") return;
     window.localStorage.setItem("bamsplay_playlists", JSON.stringify(playlists));
-    if (currentUser?.email) {
-      const safeEmailKey = currentUser.email.toLowerCase().replace(/[^a-z0-9]/g, "_");
+    const activeUser = currentUserRef.current || currentUser;
+    if (activeUser?.email) {
+      const safeEmailKey = activeUser.email.toLowerCase().replace(/[^a-z0-9]/g, "_");
       window.localStorage.setItem(`bamsplay_data_${safeEmailKey}_playlists`, JSON.stringify(playlists));
       // Cloud sync
       fetch("/api/auth/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          user: currentUser,
+          user: activeUser,
           playlists,
-          likedSongIds,
+          likedSongIds: likedSongIdsRef.current || likedSongIds,
         }),
       }).catch(() => {});
     }
@@ -1229,6 +1296,30 @@ export function AudioProvider({ children }) {
     setSelectedSongForPlaylist(null);
   };
 
+  // Delete Playlist Modal Controls
+  const openDeletePlaylistModal = (playlist) => {
+    if (!playlist || playlist.id === "liked-songs") return;
+    setPlaylistToDelete(playlist);
+    setIsDeletePlaylistModalOpen(true);
+  };
+
+  const closeDeletePlaylistModal = () => {
+    setIsDeletePlaylistModalOpen(false);
+    setPlaylistToDelete(null);
+  };
+
+  // Edit Playlist Modal Controls
+  const openEditPlaylistModal = (playlist) => {
+    if (!playlist || playlist.id === "liked-songs") return;
+    setPlaylistToEdit(playlist);
+    setIsEditPlaylistModalOpen(true);
+  };
+
+  const closeEditPlaylistModal = () => {
+    setIsEditPlaylistModalOpen(false);
+    setPlaylistToEdit(null);
+  };
+
   // Add song to playlist
   const addSongToPlaylist = (songOrId, playlistId) => {
     const songId = typeof songOrId === "object" ? songOrId.id : songOrId;
@@ -1246,8 +1337,8 @@ export function AudioProvider({ children }) {
     let targetPlaylistTitle = "";
     let alreadyInPlaylist = false;
 
-    setPlaylists((prev) =>
-      prev.map((pl) => {
+    setPlaylists((prev) => {
+      const nextPlaylists = prev.map((pl) => {
         if (pl.id === playlistId) {
           targetPlaylistTitle = pl.title;
           const currentIds = pl.songIds || [];
@@ -1263,8 +1354,29 @@ export function AudioProvider({ children }) {
           };
         }
         return pl;
-      })
-    );
+      });
+
+      if (!alreadyInPlaylist && typeof window !== "undefined") {
+        window.localStorage.setItem("bamsplay_playlists", JSON.stringify(nextPlaylists));
+        const activeUser = currentUserRef.current || currentUser;
+        if (activeUser?.email) {
+          const safeEmailKey = activeUser.email.toLowerCase().replace(/[^a-z0-9]/g, "_");
+          window.localStorage.setItem(`bamsplay_data_${safeEmailKey}_playlists`, JSON.stringify(nextPlaylists));
+          fetch("/api/auth/sync", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              user: activeUser,
+              playlists: nextPlaylists,
+              likedSongIds: likedSongIdsRef.current || likedSongIds || [],
+            }),
+          }).catch(() => {});
+        }
+      }
+
+      playlistsRef.current = nextPlaylists;
+      return nextPlaylists;
+    });
 
     if (alreadyInPlaylist) {
       showToast(`Lagu sudah ada di "${targetPlaylistTitle}"`, "default");
@@ -1276,8 +1388,8 @@ export function AudioProvider({ children }) {
   // Remove song from playlist
   const removeSongFromPlaylist = (songId, playlistId) => {
     let targetPlaylistTitle = "";
-    setPlaylists((prev) =>
-      prev.map((pl) => {
+    setPlaylists((prev) => {
+      const nextPlaylists = prev.map((pl) => {
         if (pl.id === playlistId) {
           targetPlaylistTitle = pl.title;
           const nextIds = (pl.songIds || []).filter((id) => id !== songId);
@@ -1288,14 +1400,35 @@ export function AudioProvider({ children }) {
           };
         }
         return pl;
-      })
-    );
+      });
+
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("bamsplay_playlists", JSON.stringify(nextPlaylists));
+        const activeUser = currentUserRef.current || currentUser;
+        if (activeUser?.email) {
+          const safeEmailKey = activeUser.email.toLowerCase().replace(/[^a-z0-9]/g, "_");
+          window.localStorage.setItem(`bamsplay_data_${safeEmailKey}_playlists`, JSON.stringify(nextPlaylists));
+          fetch("/api/auth/sync", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              user: activeUser,
+              playlists: nextPlaylists,
+              likedSongIds: likedSongIdsRef.current || likedSongIds || [],
+            }),
+          }).catch(() => {});
+        }
+      }
+
+      playlistsRef.current = nextPlaylists;
+      return nextPlaylists;
+    });
     showToast(`Dihapus dari "${targetPlaylistTitle}"`, "default");
   };
 
-  // Create Playlist
+  // Create Playlist (Always appends to existing playlists, never replaces)
   const createNewPlaylist = (title, description = "", initialSong = null) => {
-    const newId = `pl-${Date.now()}`;
+    const newId = `pl-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
     const initialSongIds = initialSong ? [initialSong.id] : [];
 
     if (initialSong) {
@@ -1307,9 +1440,12 @@ export function AudioProvider({ children }) {
       });
     }
 
+    const currentPlCount = (playlistsRef.current || playlists || []).filter((p) => p.id !== "liked-songs").length;
+    const cleanTitle = (title || "").trim() || `Daftar Putar Baru #${currentPlCount + 1}`;
+
     const newPlaylist = {
       id: newId,
-      title: title || `Daftar Putar Baru #${playlists.length + 1}`,
+      title: cleanTitle,
       subtitle: "Daftar Putar Pribadi",
       type: "Daftar Putar",
       creator: currentUser?.name || "Bams",
@@ -1319,9 +1455,122 @@ export function AudioProvider({ children }) {
       description: description || "Daftar putar yang baru saja kamu buat di Bamsplay.",
       songIds: initialSongIds,
     };
-    setPlaylists((prev) => [newPlaylist, ...prev]);
+
+    setPlaylists((prev) => {
+      // Retain all existing playlists and prepend the new one
+      const existingWithoutDupe = (prev || []).filter((p) => p.id !== newId);
+      const nextPlaylists = [newPlaylist, ...existingWithoutDupe];
+
+      // Immediately write to local storage & cloud to avoid any race conditions
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("bamsplay_playlists", JSON.stringify(nextPlaylists));
+        const activeUser = currentUserRef.current || currentUser;
+        if (activeUser?.email) {
+          const safeEmailKey = activeUser.email.toLowerCase().replace(/[^a-z0-9]/g, "_");
+          window.localStorage.setItem(`bamsplay_data_${safeEmailKey}_playlists`, JSON.stringify(nextPlaylists));
+          fetch("/api/auth/sync", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              user: activeUser,
+              playlists: nextPlaylists,
+              likedSongIds: likedSongIdsRef.current || likedSongIds || [],
+            }),
+          }).catch(() => {});
+        }
+      }
+
+      playlistsRef.current = nextPlaylists;
+      return nextPlaylists;
+    });
+
     showToast(`Daftar putar "${newPlaylist.title}" berhasil dibuat!`, "purple");
     return newPlaylist;
+  };
+
+  // Delete Custom Playlist
+  const deletePlaylist = (playlistId) => {
+    if (!playlistId || playlistId === "liked-songs") return;
+
+    let deletedTitle = "";
+    setPlaylists((prev) => {
+      const target = (prev || []).find((p) => p.id === playlistId);
+      if (target) deletedTitle = target.title;
+      const nextPlaylists = (prev || []).filter((p) => p.id !== playlistId);
+
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("bamsplay_playlists", JSON.stringify(nextPlaylists));
+        const activeUser = currentUserRef.current || currentUser;
+        if (activeUser?.email) {
+          const safeEmailKey = activeUser.email.toLowerCase().replace(/[^a-z0-9]/g, "_");
+          window.localStorage.setItem(`bamsplay_data_${safeEmailKey}_playlists`, JSON.stringify(nextPlaylists));
+          fetch("/api/auth/sync", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              user: activeUser,
+              playlists: nextPlaylists,
+              likedSongIds: likedSongIdsRef.current || likedSongIds || [],
+            }),
+          }).catch(() => {});
+        }
+      }
+
+      playlistsRef.current = nextPlaylists;
+      return nextPlaylists;
+    });
+
+    closeDeletePlaylistModal();
+
+    if (activeView === "playlist" && activeViewData?.playlistId === playlistId) {
+      navigateTo("home");
+    }
+
+    showToast(`Playlist "${deletedTitle || "Playlist"}" berhasil dihapus`, "default");
+  };
+
+  // Update/Edit Custom Playlist
+  const updatePlaylist = (playlistId, { title, description }) => {
+    if (!playlistId || playlistId === "liked-songs") return;
+
+    let updatedTitle = "";
+    setPlaylists((prev) => {
+      const nextPlaylists = (prev || []).map((p) => {
+        if (p.id === playlistId) {
+          updatedTitle = (title || "").trim() || p.title;
+          return {
+            ...p,
+            title: updatedTitle,
+            description: description !== undefined ? description.trim() : p.description,
+          };
+        }
+        return p;
+      });
+
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("bamsplay_playlists", JSON.stringify(nextPlaylists));
+        const activeUser = currentUserRef.current || currentUser;
+        if (activeUser?.email) {
+          const safeEmailKey = activeUser.email.toLowerCase().replace(/[^a-z0-9]/g, "_");
+          window.localStorage.setItem(`bamsplay_data_${safeEmailKey}_playlists`, JSON.stringify(nextPlaylists));
+          fetch("/api/auth/sync", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              user: activeUser,
+              playlists: nextPlaylists,
+              likedSongIds: likedSongIdsRef.current || likedSongIds || [],
+            }),
+          }).catch(() => {});
+        }
+      }
+
+      playlistsRef.current = nextPlaylists;
+      return nextPlaylists;
+    });
+
+    closeEditPlaylistModal();
+    showToast(`Playlist "${updatedTitle}" berhasil diperbarui`, "purple");
   };
 
   // Add Local Audio Files (Spotify Local Files feature)
@@ -1479,19 +1728,36 @@ export function AudioProvider({ children }) {
       if (res.ok) {
         const cloudData = await res.json();
         if (cloudData && cloudData.found) {
-          if (Array.isArray(cloudData.likedSongIds)) userLiked = cloudData.likedSongIds;
-          if (Array.isArray(cloudData.playlists) && cloudData.playlists.length > 0) {
-            userPlaylists = cloudData.playlists;
+          if (Array.isArray(cloudData.likedSongIds)) {
+            userLiked = Array.from(new Set([...(userLiked || []), ...cloudData.likedSongIds]));
+          }
+          if (Array.isArray(cloudData.playlists)) {
+            const map = new Map();
+            const likedPl = (userPlaylists || []).find((p) => p.id === "liked-songs") ||
+              cloudData.playlists.find((p) => p.id === "liked-songs") ||
+              playlistsData[0];
+            map.set("liked-songs", likedPl);
+
+            cloudData.playlists.forEach((p) => {
+              if (p && p.id && p.id !== "liked-songs") map.set(p.id, p);
+            });
+            (userPlaylists || []).forEach((p) => {
+              if (p && p.id && p.id !== "liked-songs") map.set(p.id, p);
+            });
+            userPlaylists = Array.from(map.values());
           }
         }
       }
     } catch (_) {}
 
     const finalLiked = userLiked || [];
-    const finalPlaylists = userPlaylists || playlistsData;
+    const finalPlaylists = userPlaylists && userPlaylists.length > 0 ? userPlaylists : playlistsData;
 
     setLikedSongIds(finalLiked);
+    likedSongIdsRef.current = finalLiked;
     setPlaylists(finalPlaylists);
+    playlistsRef.current = finalPlaylists;
+    currentUserRef.current = newUser;
 
     if (typeof window !== "undefined") {
       window.localStorage.setItem(`${userPrefix}liked_songs`, JSON.stringify(finalLiked));
@@ -1811,6 +2077,18 @@ export function AudioProvider({ children }) {
         setIsDeviceModalOpen,
         isCreatePlaylistModalOpen,
         setIsCreatePlaylistModalOpen,
+        playlistToDelete,
+        setPlaylistToDelete,
+        isDeletePlaylistModalOpen,
+        openDeletePlaylistModal,
+        closeDeletePlaylistModal,
+        deletePlaylist,
+        playlistToEdit,
+        setPlaylistToEdit,
+        isEditPlaylistModalOpen,
+        openEditPlaylistModal,
+        closeEditPlaylistModal,
+        updatePlaylist,
         isAddToPlaylistModalOpen,
         setIsAddToPlaylistModalOpen,
         selectedSongForPlaylist,

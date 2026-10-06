@@ -9,6 +9,8 @@ import PlayerBar from "@/components/PlayerBar";
 import MobileNav from "@/components/MobileNav";
 import MobilePlayerModal from "@/components/MobilePlayerModal";
 import CreatePlaylistModal from "@/components/CreatePlaylistModal";
+import DeletePlaylistModal from "@/components/DeletePlaylistModal";
+import EditPlaylistModal from "@/components/EditPlaylistModal";
 import AddToPlaylistModal from "@/components/AddToPlaylistModal";
 import DeviceModal from "@/components/DeviceModal";
 import AudioQualityModal from "@/components/AudioQualityModal";
@@ -42,6 +44,8 @@ export default function Home() {
 
         {/* Modals & Toasts */}
         <CreatePlaylistModal />
+        <DeletePlaylistModal />
+        <EditPlaylistModal />
         <AddToPlaylistModal />
         <DeviceModal />
         <AudioQualityModal />

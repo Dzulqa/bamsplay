@@ -15,6 +15,7 @@ import {
   ArrowDownToLine,
   CheckCircle2,
   Loader2,
+  Trash2,
 } from "lucide-react";
 import { initialSongs, topArtists } from "@/data/musicData";
 
@@ -35,6 +36,7 @@ export default function HomeView() {
     navigateTo,
     addToQueue,
     openAddToPlaylistModal,
+    openDeletePlaylistModal,
     isSidebarCollapsed,
   } = useAudio();
 
@@ -427,6 +429,19 @@ export default function HomeView() {
                   className="group p-3.5 bg-[#140d29]/80 hover:bg-[#1f153d] rounded-2xl transition-all duration-200 cursor-pointer border border-purple-500/10 hover:border-purple-500/30 flex flex-col relative shadow-sm"
                 >
                   <div className="relative aspect-square w-full rounded-xl overflow-hidden mb-3 shadow-md">
+                    {/* Delete Playlist Quick Button */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openDeletePlaylistModal(pl);
+                      }}
+                      className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 hover:bg-rose-600/90 backdrop-blur-md text-[#aba3c3] hover:text-white border border-white/10 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center shadow-lg z-10 cursor-pointer"
+                      title={`Hapus "${pl.title}"`}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+
                     {pl.cover?.startsWith("http") ? (
                       <img
                         src={pl.cover}
