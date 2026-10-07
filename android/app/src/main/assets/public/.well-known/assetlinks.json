@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.vercel.bamsplay.twa",
+      "sha256_cert_fingerprints": [
+        "7E:E2:83:63:FB:10:68:EB:2F:08:77:0A:4E:59:49:34:75:66:80:41:F6:1B:FC:A4:DF:96:31:E3:C3:36:D5:93"
+      ]
+    }
+  }
+]
