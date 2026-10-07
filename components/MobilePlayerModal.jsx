@@ -18,6 +18,7 @@ import {
   Laptop2,
   Share2,
   Volume2,
+  Volume1,
   VolumeX,
   ArrowUp,
   ArrowDown,
@@ -454,20 +455,33 @@ export default function MobilePlayerModal() {
         </button>
       </div>
 
-      {/* Mobile Volume Slider & Indicator */}
-      <div className="flex items-center gap-3 px-3.5 py-2.5 mb-5 bg-[#170e30]/80 border border-purple-500/20 rounded-xl backdrop-blur-sm">
+      {/* Sleek Spotify-Style Mobile Volume Control */}
+      <div className="flex items-center gap-3 px-1 mb-5">
         <button
           onClick={toggleMute}
-          className="text-purple-300 hover:text-white transition-colors"
+          className="p-1.5 -ml-1 text-purple-300 hover:text-white transition-transform active:scale-90 cursor-pointer"
           title={isMuted ? "Bunyikan" : "Bisukan"}
         >
           {isMuted || volume === 0 ? (
             <VolumeX className="w-4 h-4 text-rose-400" />
+          ) : volume < 0.5 ? (
+            <Volume1 className="w-4 h-4 text-purple-300" />
           ) : (
             <Volume2 className="w-4 h-4 text-purple-400" />
           )}
         </button>
-        <div className="flex-1 flex items-center relative">
+
+        <div className="flex-1 relative py-2 flex items-center group">
+          <div className="w-full h-1.5 bg-[#251a42] rounded-full overflow-hidden shadow-inner">
+            <div
+              className={`h-full rounded-full transition-all duration-75 ${
+                isMuted || volume === 0
+                  ? "bg-transparent"
+                  : "bg-gradient-to-r from-purple-500 via-fuchsia-400 to-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.5)]"
+              }`}
+              style={{ width: `${isMuted ? 0 : volume * 100}%` }}
+            />
+          </div>
           <input
             type="range"
             min="0"
@@ -475,10 +489,11 @@ export default function MobilePlayerModal() {
             step="0.01"
             value={isMuted ? 0 : volume}
             onChange={(e) => setVolume(parseFloat(e.target.value))}
-            className="w-full h-1.5 bg-[#251a42] rounded-lg appearance-none cursor-pointer accent-purple-500"
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
           />
         </div>
-        <span className="text-[11px] font-mono text-purple-300 font-semibold w-8 text-right">
+
+        <span className="text-[10px] font-mono font-bold text-purple-300/90 bg-purple-950/60 border border-purple-500/25 px-2 py-0.5 rounded-full min-w-[38px] text-center shadow-sm">
           {isMuted ? "0%" : `${Math.round(volume * 100)}%`}
         </span>
       </div>
