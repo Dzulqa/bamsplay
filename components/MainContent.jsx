@@ -9,6 +9,8 @@ import PlaylistView from "./PlaylistView";
 import ArtistView from "./ArtistView";
 import LyricsView from "./LyricsView";
 import QueueView from "./QueueView";
+import LibraryView from "./LibraryView";
+import DownloadedView from "./DownloadedView";
 
 export default function MainContent() {
   const { activeView, currentSong } = useAudio();
@@ -38,6 +40,8 @@ export default function MainContent() {
         {activeView === "artist" && <ArtistView />}
         {activeView === "lyrics" && <LyricsView />}
         {activeView === "queue" && <QueueView />}
+        {activeView === "library" && <LibraryView />}
+        {activeView === "downloaded" && <DownloadedView />}
       </div>
     </main>
   );

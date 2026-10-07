@@ -62,11 +62,11 @@ export default function HomeView() {
   return (
     <div className="relative pb-32 md:pb-16 select-none space-y-6 sm:space-y-8 max-w-7xl mx-auto">
       {/* 1. BAMSPLAY SIGNATURE SPOTLIGHT HERO BANNER — follows currently playing song */}
-      <div className="relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-r from-[#1c113b] via-[#160d2e] to-[#0d071d] border border-purple-500/20 p-4 sm:p-7 shadow-2xl">
+      <div suppressHydrationWarning className="relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-r from-[#1c113b] via-[#160d2e] to-[#0d071d] border border-purple-500/20 p-4 sm:p-7 shadow-2xl">
         {/* Ambient atmospheric aura */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-purple-600/15 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
 
-        <div key={spotlightSong?.id} className="relative z-10 flex flex-col md:flex-row items-center md:items-center justify-between gap-5 sm:gap-6 animate-fadeIn">
+        <div key={spotlightSong?.id} suppressHydrationWarning className="relative z-10 flex flex-col md:flex-row items-center md:items-center justify-between gap-5 sm:gap-6 animate-fadeIn">
           {/* Left Info & Actions */}
           <div className="flex-1 space-y-2.5 sm:space-y-3 text-center md:text-left min-w-0">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 text-[11px] sm:text-xs font-bold tracking-wide">

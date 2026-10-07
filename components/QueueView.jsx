@@ -80,9 +80,9 @@ export default function QueueView() {
         </h2>
 
         {currentSong ? (
-          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-950/60 to-[#1b1236]/80 border border-purple-500/30 rounded-2xl shadow-xl backdrop-blur-md">
-            <div className="flex items-center gap-4 min-w-0">
-              <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden shrink-0 shadow-lg border border-purple-500/20">
+          <div className="flex items-center justify-between p-3 sm:p-4 bg-gradient-to-r from-purple-950/60 to-[#1b1236]/80 border border-purple-500/30 rounded-2xl shadow-xl backdrop-blur-md gap-2">
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+              <div className="relative w-12 h-12 sm:w-16 sm:h-16 rounded-xl overflow-hidden shrink-0 shadow-lg border border-purple-500/20">
                 <img
                   src={currentSong.cover || "/default-cover.svg"}
                   alt={currentSong.title}
@@ -101,22 +101,22 @@ export default function QueueView() {
                 )}
               </div>
 
-              <div className="min-w-0">
-                <span className="font-extrabold text-base sm:text-lg text-white block truncate">
+              <div className="min-w-0 flex-1">
+                <span className="font-extrabold text-sm sm:text-lg text-white block truncate">
                   {currentSong.title}
                 </span>
                 <span className="text-xs sm:text-sm text-purple-300 font-medium block truncate">
                   {currentSong.artist} • <span className="text-[#a49bbd]">{currentSong.album}</span>
                 </span>
                 {userQueue.length > 0 && (
-                  <span className="inline-flex items-center gap-1 mt-1 text-[11px] font-bold text-fuchsia-300 bg-fuchsia-950/60 px-2 py-0.5 rounded-full border border-fuchsia-500/30">
+                  <span className="inline-flex items-center gap-1 mt-1 text-[10px] sm:text-[11px] font-bold text-fuchsia-300 bg-fuchsia-950/60 px-2 py-0.5 rounded-full border border-fuchsia-500/30">
                     <Sparkles className="w-3 h-3" /> {userQueue.length} lagu menanti di antrean
                   </span>
                 )}
               </div>
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
               <button
                 onClick={() => openAddToPlaylistModal(currentSong)}
                 className="p-2 text-[#a298be] hover:text-purple-300 hover:bg-purple-950/40 rounded-xl transition-all"
@@ -305,11 +305,19 @@ export default function QueueView() {
 
       {/* 3. CONTEXT UPCOMING TRACKS (PRIORITY 2) */}
       <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-xs font-bold text-[#8d84a7] uppercase tracking-wider flex items-center gap-1.5">
-            Berikutnya Dari: <span className="text-purple-300 font-extrabold lowercase first-letter:uppercase">{contextSourceTitle}</span> ({contextUpcoming.length})
-          </h2>
-          <span className="text-[11px] text-[#786f91]">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-3">
+          <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+            <span className="text-[11px] font-bold text-[#8d84a7] uppercase tracking-wider shrink-0">
+              Berikutnya Dari:
+            </span>
+            <span className="text-xs font-black text-purple-300 truncate max-w-[200px] sm:max-w-xs">
+              {contextSourceTitle}
+            </span>
+            <span className="text-[11px] font-bold text-[#8d84a7] shrink-0">
+              ({contextUpcoming.length})
+            </span>
+          </div>
+          <span className="text-[10px] sm:text-[11px] text-[#786f91]">
             {userQueue.length > 0 ? "Diputar setelah antrean manual habis" : "Urutan pemutaran aktif"}
           </span>
         </div>
@@ -327,13 +335,13 @@ export default function QueueView() {
                 <div
                   key={`context-${song.id}-${idx}`}
                   onClick={() => playSong(song, currentPlaylist)}
-                  className="flex items-center justify-between p-2.5 rounded-xl bg-[#140e2a]/60 hover:bg-[#20163f] border border-transparent hover:border-purple-500/20 cursor-pointer group transition-all"
+                  className="flex items-center justify-between p-2 sm:p-2.5 rounded-xl bg-[#140e2a]/60 hover:bg-[#20163f] border border-transparent hover:border-purple-500/20 cursor-pointer group transition-all gap-2"
                 >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span className="w-6 text-center text-xs font-mono text-[#776f8e] group-hover:hidden">
+                  <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                    <span className="w-5 text-center text-xs font-mono text-[#776f8e] shrink-0 group-hover:hidden">
                       {idx + 1}
                     </span>
-                    <div className="w-6 text-center text-xs text-purple-300 hidden group-hover:block">
+                    <div className="w-5 text-center text-xs text-purple-300 hidden group-hover:block shrink-0">
                       <Play className="w-3.5 h-3.5 fill-purple-400 mx-auto" />
                     </div>
 
@@ -347,23 +355,23 @@ export default function QueueView() {
                       className="w-10 h-10 rounded-lg object-cover shrink-0 shadow-sm"
                     />
 
-                    <div className="min-w-0">
-                      <span className="font-semibold text-sm text-white group-hover:text-purple-300 block truncate">
+                    <div className="min-w-0 flex-1">
+                      <span className="font-semibold text-xs sm:text-sm text-white group-hover:text-purple-300 block truncate">
                         {song.title}
                       </span>
-                      <span className="text-xs text-[#8f86a8] block truncate">
+                      <span className="text-[11px] sm:text-xs text-[#8f86a8] block truncate">
                         {song.artist}
                       </span>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 sm:gap-3 text-xs">
+                  <div className="flex items-center gap-1 sm:gap-2 text-xs shrink-0">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         openAddToPlaylistModal(song);
                       }}
-                      className="text-[#887f9e] hover:text-purple-300 p-1"
+                      className="text-[#887f9e] hover:text-purple-300 p-1.5 rounded-lg active:scale-95"
                       title="Tambahkan ke Playlist"
                     >
                       <ListPlus className="w-4 h-4" />
@@ -373,7 +381,7 @@ export default function QueueView() {
                         e.stopPropagation();
                         toggleLike(song);
                       }}
-                      className="text-[#887f9e] hover:text-white p-1"
+                      className="text-[#887f9e] hover:text-white p-1.5 rounded-lg active:scale-95"
                       title={isLiked ? "Hapus dari Favorit" : "Simpan ke Favorit"}
                     >
                       <Heart
@@ -382,7 +390,7 @@ export default function QueueView() {
                         }`}
                       />
                     </button>
-                    <span className="font-mono text-[#8a81a4]">
+                    <span className="font-mono text-[#8a81a4] text-[11px] sm:text-xs w-9 text-right">
                       {song.duration || "3:30"}
                     </span>
                   </div>

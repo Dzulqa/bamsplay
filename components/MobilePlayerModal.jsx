@@ -19,6 +19,9 @@ import {
   Share2,
   Volume2,
   VolumeX,
+  ArrowUp,
+  ArrowDown,
+  X,
 } from "lucide-react";
 
 export default function MobilePlayerModal() {
@@ -111,6 +114,64 @@ export default function MobilePlayerModal() {
   const isUnsyncedLyrics = cleanLyrics.length > 0 && cleanLyrics.some((l) => l?.isUnsynced);
 
   const prevMobileTimeRef = useRef(currentTime);
+  const [isUserScrolledAway, setIsUserScrolledAway] = useState(false);
+  const prevSongIdRef = useRef(currentSong?.id);
+
+  if (prevSongIdRef.current !== currentSong?.id) {
+    prevSongIdRef.current = currentSong?.id;
+    if (isUserScrolledAway) {
+      setIsUserScrolledAway(false);
+    }
+  }
+
+  const [scrollDirection, setScrollDirection] = useState("down");
+  const isAutoScrollingRef = useRef(false);
+  const scrollTimeoutRef = useRef(null);
+
+  const updateScrollDirection = () => {
+    if (!lyricsContainerRef.current) return;
+    const container = lyricsContainerRef.current;
+    if (activeLineRef.current) {
+      const line = activeLineRef.current;
+      const containerRect = container.getBoundingClientRect();
+      const lineRect = line.getBoundingClientRect();
+      const containerCenter = containerRect.top + containerRect.height / 2;
+      const lineCenter = lineRect.top + lineRect.height / 2;
+      setScrollDirection(lineCenter < containerCenter ? "up" : "down");
+    }
+  };
+
+  const handleLyricsScroll = () => {
+    if (!isAutoScrollingRef.current) {
+      setIsUserScrolledAway(true);
+      clearTimeout(scrollTimeoutRef.current);
+      scrollTimeoutRef.current = setTimeout(() => {
+        setIsUserScrolledAway(false);
+      }, 6000);
+    }
+    updateScrollDirection();
+  };
+
+  const scrollToActive = () => {
+    setIsUserScrolledAway(false);
+    isAutoScrollingRef.current = true;
+    if (lyricsContainerRef.current) {
+      if (activeIndex <= 0) {
+        lyricsContainerRef.current.scrollTo({ top: 0, behavior: "smooth" });
+      } else if (activeLineRef.current) {
+        const lineEl = activeLineRef.current;
+        const containerEl = lyricsContainerRef.current;
+        const targetScroll = Math.max(
+          0,
+          lineEl.offsetTop - containerEl.clientHeight / 2 + lineEl.clientHeight / 2
+        );
+        containerEl.scrollTo({ top: targetScroll, behavior: "smooth" });
+      }
+    }
+    setTimeout(() => {
+      isAutoScrollingRef.current = false;
+    }, 600);
+  };
 
   // When track changes on mobile, immediately reset lyrics scroll to top
   useEffect(() => {
@@ -132,20 +193,29 @@ export default function MobilePlayerModal() {
   }, [currentTime]);
 
   useEffect(() => {
-    if (showLyricsCard && lyricsContainerRef.current) {
-      if (activeIndex <= 0) {
-        lyricsContainerRef.current.scrollTo({ top: 0, behavior: "smooth" });
-      } else if (activeLineRef.current) {
-        const lineEl = activeLineRef.current;
-        const containerEl = lyricsContainerRef.current;
-        const targetScroll = Math.max(
-          0,
-          lineEl.offsetTop - containerEl.clientHeight / 2 + lineEl.clientHeight / 2
-        );
-        containerEl.scrollTo({ top: targetScroll, behavior: "smooth" });
-      }
+    if (!showLyricsCard || !lyricsContainerRef.current) return;
+    if (isUserScrolledAway) {
+      updateScrollDirection();
+      return;
     }
-  }, [activeIndex, showLyricsCard]);
+
+    if (activeIndex <= 0) {
+      lyricsContainerRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    } else if (activeLineRef.current) {
+      const lineEl = activeLineRef.current;
+      const containerEl = lyricsContainerRef.current;
+      const targetScroll = Math.max(
+        0,
+        lineEl.offsetTop - containerEl.clientHeight / 2 + lineEl.clientHeight / 2
+      );
+      isAutoScrollingRef.current = true;
+      containerEl.scrollTo({ top: targetScroll, behavior: "smooth" });
+      const timer = setTimeout(() => {
+        isAutoScrollingRef.current = false;
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [activeIndex, showLyricsCard, isUserScrolledAway]);
 
   if (!isMobilePlayerOpen || !currentSong) return null;
 
@@ -190,48 +260,71 @@ export default function MobilePlayerModal() {
       {/* Main Center Area: Big Cover or Synchronized Lyrics */}
       <div className="flex-1 flex flex-col items-center justify-center my-4 min-h-[260px]">
         {showLyricsCard ? (
-          <div
-            ref={lyricsContainerRef}
-            className="w-full h-80 bg-[#160e2e]/95 rounded-2xl p-4 border border-purple-500/30 overflow-y-auto custom-scrollbar flex flex-col scroll-smooth"
-          >
-            <div className="sticky top-0 z-10 bg-[#160e2e]/90 backdrop-blur-md flex items-center justify-between pb-2 mb-2 border-b border-purple-500/20 text-xs text-purple-300 font-bold">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-purple-300">
-                <Mic2 className="w-3.5 h-3.5 text-purple-400" />
-                <span>{isUnsyncedLyrics ? "≈ Lirik Perkiraan" : "Lirik Lagu Sinkron"}</span>
+          <div className="relative w-full h-80 max-h-[50vh] rounded-2xl overflow-hidden shadow-2xl border border-purple-500/30 bg-[#160e2e]/95 flex flex-col">
+            {/* Minimal Subtle Close Icon (No text obstructing lyrics) */}
+            <button
+              onClick={() => setShowLyricsCard(false)}
+              className="absolute top-3 right-3 z-20 p-1.5 rounded-full bg-black/40 hover:bg-black/70 text-white/80 hover:text-white transition-colors cursor-pointer"
+              title="Tutup Lirik"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Scrollable Lyric Lines with generous padding */}
+            <div
+              ref={lyricsContainerRef}
+              onScroll={handleLyricsScroll}
+              className="flex-1 w-full overflow-y-auto custom-scrollbar pt-8 pb-16 px-4 flex flex-col scroll-smooth text-center"
+            >
+              <div className="space-y-3.5 my-auto">
+                {cleanLyrics.length === 0 ? (
+                  <div className="py-16 text-center text-xs text-purple-300/60">
+                    Lirik belum tersedia untuk lagu ini
+                  </div>
+                ) : (
+                  cleanLyrics.map((line, idx) => {
+                    const isActive = idx === activeIndex;
+                    return (
+                      <p
+                        key={idx}
+                        ref={isActive ? activeLineRef : null}
+                        onClick={() =>
+                          !isUnsyncedLyrics &&
+                          typeof line.time === "number" &&
+                          seek(line.time + (Number(currentSong?.lyricsOffset) || 0))
+                        }
+                        className={`transition-all duration-300 rounded-xl py-1.5 px-3 text-base sm:text-lg font-bold select-none ${
+                          isUnsyncedLyrics ? "cursor-default" : "cursor-pointer"
+                        } ${
+                          isActive
+                            ? "text-white scale-105 drop-shadow-[0_0_20px_rgba(168,85,247,0.7)] font-extrabold bg-purple-600/20"
+                            : "text-white/30 hover:text-white/60"
+                        }`}
+                      >
+                        {line.text}
+                      </p>
+                    );
+                  })
+                )}
               </div>
-              <button
-                onClick={() => setShowLyricsCard(false)}
-                className="text-white/80 hover:text-white hover:underline text-[11px] font-medium"
-              >
-                Tutup
-              </button>
             </div>
 
-            <div className="space-y-3.5 py-2 text-center">
-              {cleanLyrics.length === 0 ? (
-                <div className="py-16 text-center text-xs text-purple-300/60">
-                  Lirik belum tersedia untuk lagu ini
-                </div>
-              ) : (
-                cleanLyrics.map((line, idx) => {
-                  const isActive = idx === activeIndex;
-                  return (
-                    <p
-                      key={idx}
-                      ref={isActive ? activeLineRef : null}
-                      onClick={() => !isUnsyncedLyrics && typeof line.time === "number" && seek(line.time + (Number(currentSong?.lyricsOffset) || 0))}
-                      className={`transition-colors duration-300 rounded-lg py-1.5 px-2 text-base font-semibold ${isUnsyncedLyrics ? "cursor-default" : "cursor-pointer"} ${
-                        isActive
-                          ? "text-white"
-                          : "text-white/35 hover:text-white/60"
-                      }`}
-                    >
-                      {line.text}
-                    </p>
-                  );
-                })
-              )}
-            </div>
+            {/* Floating Spotify/Windows-style "Ikuti Lagu" button */}
+            {isUserScrolledAway && cleanLyrics && cleanLyrics.length > 0 && (
+              <div className="absolute bottom-3 left-0 right-0 flex justify-center z-30 pointer-events-none">
+                <button
+                  onClick={scrollToActive}
+                  className="pointer-events-auto flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-2xl border border-purple-400/40 active:scale-95 transition-all animate-fadeIn"
+                >
+                  {scrollDirection === "up" ? (
+                    <ArrowUp className="w-3.5 h-3.5" />
+                  ) : (
+                    <ArrowDown className="w-3.5 h-3.5" />
+                  )}
+                  <span>Ikuti Lagu</span>
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="w-full max-w-[300px] aspect-square rounded-2xl overflow-hidden shadow-2xl border border-purple-500/30 relative group">

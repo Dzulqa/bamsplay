@@ -47,6 +47,15 @@ const shuffleArray = (array) => {
   return arr;
 };
 
+// Helper to pick a random initial song
+const getRandomSong = () => {
+  if (!initialSongs || initialSongs.length === 0) return null;
+  const idx = Math.floor(Math.random() * initialSongs.length);
+  return initialSongs[idx] || initialSongs[0];
+};
+
+const initialRandomSong = getRandomSong();
+
 export function AudioProvider({ children }) {
   const [songs, setSongs] = useState(initialSongs);
   // Start empty — will be restored from localStorage in the mount effect below
@@ -65,11 +74,11 @@ export function AudioProvider({ children }) {
   const [historyIndex, setHistoryIndex] = useState(0);
 
   // Playback State
-  const [currentSong, setCurrentSong] = useState(initialSongs[0]);
+  const [currentSong, setCurrentSong] = useState(initialRandomSong);
   const [currentPlaylist, setCurrentPlaylist] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTimeState] = useState(0);
-  const [duration, setDuration] = useState(initialSongs[0].durationSec || 192);
+  const [duration, setDuration] = useState(initialRandomSong?.durationSec || 192);
 
   // Unified clock updater: keeps both React state and ref in 100% lockstep
   const setCurrentTime = (time) => {
@@ -84,12 +93,10 @@ export function AudioProvider({ children }) {
         if (saved !== null) {
           const parsed = parseFloat(saved);
           if (!isNaN(parsed)) {
-            if (isMobileDevice()) return 1.0;
             return parsed;
           }
         }
       } catch (_) {}
-      if (isMobileDevice()) return 1.0;
     }
     return 1.0;
   });
@@ -146,9 +153,9 @@ export function AudioProvider({ children }) {
   // Audio & Playback Master Refs (Prevents closure staling and ensures continuous multi-minute playback)
   const audioRef = useRef(null);
   const currentTimeRef = useRef(0);
-  const durationRef = useRef(initialSongs[0].durationSec || 192);
+  const durationRef = useRef(initialRandomSong?.durationSec || 192);
   const isPlayingRef = useRef(false);
-  const currentSongRef = useRef(initialSongs[0]);
+  const currentSongRef = useRef(initialRandomSong);
   const repeatModeRef = useRef("off");
   const isShuffleRef = useRef(false);
   const queueRef = useRef(initialSongs);
@@ -411,15 +418,16 @@ export function AudioProvider({ children }) {
         .catch(() => {});
     }
 
-    // Select a random song on startup so reopening the app/web features a fresh random track
-    if (!isPlayingRef.current && initialSongs && initialSongs.length > 0) {
-      const randomIdx = Math.floor(Math.random() * initialSongs.length);
-      const initialRandomSong = initialSongs[randomIdx] || initialSongs[0];
-      setCurrentSong(initialRandomSong);
-      currentSongRef.current = initialRandomSong;
-      const initialDur = initialRandomSong.durationSec || 192;
-      durationRef.current = initialDur;
-      setDuration(initialDur);
+    // Select a random song on startup so reopening the app features a fresh random track
+    if (!isPlayingRef.current && (!currentSongRef.current || currentSongRef.current.id === "bernadya-1")) {
+      const rand = getRandomSong();
+      if (rand) {
+        setCurrentSong(rand);
+        currentSongRef.current = rand;
+        const initialDur = rand.durationSec || 192;
+        durationRef.current = initialDur;
+        setDuration(initialDur);
+      }
     }
 
     // Fetch official real catalog songs from /api/music/explore
@@ -585,7 +593,6 @@ export function AudioProvider({ children }) {
   // Volume Normalization helper (Safe LUFS scaling without Web Audio CORS muting)
   const computeEffectiveVolume = (baseVol, muted, norm, normLvl) => {
     if (muted) return 0;
-    if (isMobileDevice()) return 1.0;
     if (!norm) return baseVol;
     if (normLvl === "loud") return Math.min(1.0, baseVol * 1.25);
     if (normLvl === "quiet") return baseVol * 0.8;
@@ -732,10 +739,10 @@ export function AudioProvider({ children }) {
       audioNormalizationLevel
     );
     if (audioRef.current) {
-      audioRef.current.volume = isMobileDevice() ? 1.0 : effVol;
+      audioRef.current.volume = effVol;
     }
     if (playerEngineRef.current) {
-      playerEngineRef.current.setVolume(isMuted ? 0 : isMobileDevice() ? 100 : Math.round(effVol * 100));
+      playerEngineRef.current.setVolume(isMuted ? 0 : Math.round(effVol * 100));
     }
   }, [volume, isMuted, audioNormalization, audioNormalizationLevel]);
 
@@ -870,7 +877,7 @@ export function AudioProvider({ children }) {
         try {
           audioRef.current.src = blobUrl;
           audioRef.current.currentTime = 0;
-          audioRef.current.volume = isMobileDevice() ? 1.0 : effVol;
+          audioRef.current.volume = effVol;
           audioRef.current.play().catch(console.warn);
         } catch (err) {
           console.warn("Offline audio play error:", err);
@@ -903,7 +910,7 @@ export function AudioProvider({ children }) {
         try {
           audioRef.current.src = song.audioUrl;
           audioRef.current.currentTime = 0;
-          audioRef.current.volume = isMobileDevice() ? 1.0 : effVol;
+          audioRef.current.volume = effVol;
           audioRef.current.play().catch(console.warn);
         } catch (err) {
           console.warn("Local audio error:", err);
@@ -1290,6 +1297,82 @@ export function AudioProvider({ children }) {
       } catch (_) {}
     }
   };
+
+  // ── Native Media Session API for Lockscreen & Android Background Audio ──
+  useEffect(() => {
+    if (typeof window === "undefined" || !("mediaSession" in navigator)) return;
+
+    if (currentSong) {
+      try {
+        navigator.mediaSession.metadata = new window.MediaMetadata({
+          title: currentSong.title,
+          artist: currentSong.artist,
+          album: currentSong.album || "Bamsplay",
+          artwork: [
+            {
+              src: currentSong.cover || "/bamsplay-logo-circle.png",
+              sizes: "96x96",
+              type: "image/png",
+            },
+            {
+              src: currentSong.cover || "/bamsplay-logo-circle.png",
+              sizes: "192x192",
+              type: "image/png",
+            },
+            {
+              src: currentSong.cover || "/bamsplay-logo-circle.png",
+              sizes: "512x512",
+              type: "image/png",
+            },
+          ],
+        });
+      } catch (err) {
+        console.warn("MediaSession metadata error:", err);
+      }
+    }
+  }, [currentSong]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !("mediaSession" in navigator)) return;
+
+    try {
+      navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
+    } catch (_) {}
+
+    const actionHandlers = [
+      ["play", () => togglePlay()],
+      ["pause", () => togglePlay()],
+      ["previoustrack", () => prevTrack()],
+      ["nexttrack", () => nextTrack()],
+      [
+        "seekto",
+        (details) => {
+          if (typeof details.seekTime === "number" && !isNaN(details.seekTime)) {
+            seek(details.seekTime);
+          }
+        },
+      ],
+    ];
+
+    actionHandlers.forEach(([action, handler]) => {
+      try {
+        navigator.mediaSession.setActionHandler(action, handler);
+      } catch (_) {}
+    });
+  }, [isPlaying, currentSong]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !("mediaSession" in navigator)) return;
+    if ("setPositionState" in navigator.mediaSession && duration > 0 && currentTime >= 0) {
+      try {
+        navigator.mediaSession.setPositionState({
+          duration: Math.max(1, duration),
+          playbackRate: 1,
+          position: Math.min(currentTime, duration),
+        });
+      } catch (_) {}
+    }
+  }, [currentTime, duration]);
 
   // Official Video / Full Audio Handlers
   const openOfficialVideo = () => {

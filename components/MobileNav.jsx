@@ -38,14 +38,18 @@ export default function MobileNav() {
       </button>
 
       <button
-        onClick={() => navigateTo("playlist", { playlistId: "liked-songs" })}
+        onClick={() => navigateTo("library")}
         className={`flex flex-col items-center justify-center flex-1 py-1 transition-colors ${
-          activeView === "playlist" ? "text-white" : "text-[#8a81a4] hover:text-white"
+          activeView === "library" || activeView === "playlist" || activeView === "downloaded"
+            ? "text-white"
+            : "text-[#8a81a4] hover:text-white"
         }`}
       >
         <Library
           className={`w-5 h-5 mb-0.5 ${
-            activeView === "playlist" ? "text-purple-400" : ""
+            activeView === "library" || activeView === "playlist" || activeView === "downloaded"
+              ? "text-purple-400"
+              : ""
           }`}
         />
         <span className="text-[10px] font-semibold">Koleksi Kamu</span>

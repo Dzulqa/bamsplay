@@ -38,7 +38,7 @@ export default function GlobalAudioEngine() {
     registerPlayerEngine,
   } = useAudio();
 
-  const [isApiReady, setIsApiReady] = useState(false);
+  const [isApiReady, setIsApiReady] = useState(() => typeof window !== "undefined" && !!(window.YT && window.YT.Player));
   const [isPlayerReady, setIsPlayerReady] = useState(false);
 
   const playerRef = useRef(null);
@@ -51,12 +51,21 @@ export default function GlobalAudioEngine() {
   const volumeRef = useRef(volume);
   const currentSongRef = useRef(currentSong);
 
+  const silentAudioRef = useRef(null);
+
   useEffect(() => {
     currentSongRef.current = currentSong;
   }, [currentSong]);
 
   useEffect(() => {
     isPlayingRef.current = isPlaying;
+    if (silentAudioRef.current) {
+      if (isPlaying) {
+        silentAudioRef.current.play().catch(() => {});
+      } else {
+        silentAudioRef.current.pause();
+      }
+    }
   }, [isPlaying]);
 
   useEffect(() => {
@@ -64,15 +73,31 @@ export default function GlobalAudioEngine() {
     volumeRef.current = volume;
   }, [isMuted, volume]);
 
+  // Android Background Audio Keep-Alive: An inaudible looping audio tag tells Android OS to never freeze playback when app is minimized
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const a = new Audio();
+      // 1-sec silent WAV base64
+      a.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAP8A/w==";
+      a.loop = true;
+      a.volume = 0.001;
+      silentAudioRef.current = a;
+    } catch (_) {}
+
+    return () => {
+      if (silentAudioRef.current) {
+        try {
+          silentAudioRef.current.pause();
+          silentAudioRef.current.src = "";
+        } catch (_) {}
+      }
+    };
+  }, []);
+
   // Calculate master dynamic acoustic volume reflecting Quality, EQ and Normalization
   const computeMasterVol = () => {
-    if (isMuted) return 0;
-
-    // Mobile / Capacitor APK check: Phone hardware volume rocker governs output power.
-    // Setting internal volume to 100 ensures mobile phones achieve full, loud, crisp speaker volume!
-    if (isMobileDevice()) {
-      return 100;
-    }
+    if (isMuted || volume === 0) return 0;
 
     let multiplier = 1.0;
 
@@ -115,7 +140,7 @@ export default function GlobalAudioEngine() {
       }
     }
 
-    return Math.max(10, Math.min(100, Math.round(volume * multiplier * 100)));
+    return Math.max(0, Math.min(100, Math.round(volume * multiplier * 100)));
   };
 
   // Real-time audio engine adaptation to quality, EQ and normalization changes
@@ -147,7 +172,6 @@ export default function GlobalAudioEngine() {
     if (typeof window === "undefined") return;
 
     if (window.YT && window.YT.Player) {
-      setIsApiReady(true);
       return;
     }
 

@@ -1,7 +1,7 @@
 // =====================================================================
 // Bamsplay Service Worker - PWA Offline Support
 // =====================================================================
-const CACHE_NAME = 'bamsplay-v3';
+const CACHE_NAME = 'bamsplay-v4';
 const STATIC_ASSETS = [
   '/manifest.json',
   '/icons/icon-192x192.png',
