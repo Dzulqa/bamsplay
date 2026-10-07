@@ -35,9 +35,10 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Accept Android SDK Licenses
+      - name: Accept Android SDK Licenses & Install Android 36 Platform
         run: |
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-36" || true
 
       - name: Install NPM Dependencies
         run: npm install --legacy-peer-deps
