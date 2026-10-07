@@ -17,6 +17,7 @@ import AudioQualityModal from "@/components/AudioQualityModal";
 import LoginModal from "@/components/LoginModal";
 import EditProfileModal from "@/components/EditProfileModal";
 import GlobalAudioEngine from "@/components/GlobalAudioEngine";
+import PiPLogoOverlay from "@/components/PiPLogoOverlay";
 import Toast from "@/components/Toast";
 
 export default function Home() {
@@ -41,6 +42,9 @@ export default function Home() {
 
         {/* Master Stream Audio Engine (100% Invisible Background Audio) */}
         <GlobalAudioEngine />
+
+        {/* Floating PiP Logo Overlay (Compact widget shown during Picture-in-Picture) */}
+        <PiPLogoOverlay />
 
         {/* Modals & Toasts */}
         <CreatePlaylistModal />
