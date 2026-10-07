@@ -2,12 +2,11 @@
 
 import React, { useState, useEffect } from "react";
 import { useAudio } from "@/context/AudioContext";
-import UserAvatar from "./UserAvatar";
 
 /**
  * PiPLogoOverlay
- * Renders a compact, glowing floating widget with the Bamsplay logo
- * and user account avatar when running in Android Picture-in-Picture mode.
+ * Renders the sleek, glowing Bamsplay APK logo when the app
+ * is minimized into Android floating window (Picture-in-Picture) mode.
  *
  * Guaranteed safe: If window is full screen (> 340px), this component
  * strictly returns null so it can NEVER get stuck on screen.
@@ -15,7 +14,7 @@ import UserAvatar from "./UserAvatar";
 export default function PiPLogoOverlay() {
   const [isPiP, setIsPiP] = useState(false);
   const [windowDimensions, setWindowDimensions] = useState({ width: 0, height: 0 });
-  const { isPlaying, currentSong, currentUser } = useAudio();
+  const { isPlaying, currentSong } = useAudio();
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -88,27 +87,20 @@ export default function PiPLogoOverlay() {
       style={{ backgroundColor: "#0b0813" }}
     >
       <div className="relative flex items-center justify-center">
-        {/* Animated ambient glow when playing */}
+        {/* Animated ambient purple glow when music is playing */}
         {isPlaying && (
           <div className="absolute w-20 h-20 rounded-full bg-purple-600/40 blur-md animate-pulse" />
         )}
 
-        {/* Bamsplay Floating Circle Logo */}
+        {/* Authentic Bamsplay APK Circle Logo */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/bamsplay-logo-circle.png"
           alt="Bamsplay"
-          className={`w-14 h-14 object-contain relative z-10 transition-transform duration-300 drop-shadow-[0_0_12px_rgba(147,51,234,0.7)] ${
+          className={`w-14 h-14 object-contain relative z-10 transition-transform duration-300 drop-shadow-[0_0_14px_rgba(147,51,234,0.75)] ${
             isPlaying ? "scale-100" : "scale-90 opacity-75"
           }`}
         />
-
-        {/* User Account Avatar Badge (Logo Akun) */}
-        {currentUser && (
-          <div className="absolute -bottom-1 -right-1 z-20 ring-2 ring-[#0b0813] rounded-full shadow-lg scale-75">
-            <UserAvatar user={currentUser} size="sm" showGoogleBadge={false} />
-          </div>
-        )}
       </div>
 
       {/* Track title badge */}
