@@ -6,6 +6,41 @@ import { X, Check, UserPlus, Sparkles, ShieldCheck, Mail, ArrowRight, Loader2 } 
 import BamsplayLogo from "./BamsplayLogo";
 import UserAvatar from "./UserAvatar";
 
+// Official Google "G" 4-color SVG Icon
+function GoogleIcon({ className = "w-5 h-5" }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24">
+      <path
+        fill="#4285F4"
+        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+      />
+    </svg>
+  );
+}
+
+// Detect Android APK / WebView environment
+const isAndroidApp = () => {
+  if (typeof window === "undefined") return false;
+  return (
+    Boolean(window.AndroidBridge) ||
+    Boolean(window.Capacitor) ||
+    window.location.protocol === "capacitor:" ||
+    /Android.*(wv|Version\/)/i.test(navigator.userAgent)
+  );
+};
+
 export default function LoginModal() {
   const {
     isLoginModalOpen,
@@ -21,16 +56,29 @@ export default function LoginModal() {
   const [isCustomMode, setIsCustomMode] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isNativeEnvironment, setIsNativeEnvironment] = useState(false);
+  const [gsiReady, setGsiReady] = useState(false);
   const googleBtnRef = useRef(null);
 
   const clientId =
     process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
     "1001756107523-42k5ruelt3n2e4oh9i6siv7blehreh7g.apps.googleusercontent.com";
 
-  // Initialize official Google Identity Services
+  // Check runtime environment
+  useEffect(() => {
+    setIsNativeEnvironment(isAndroidApp());
+  }, []);
+
+  // Handle Google Identity Services only on standard Desktop Web
   useEffect(() => {
     if (!isLoginModalOpen) return;
+    if (isAndroidApp()) {
+      // In Android WebView, Google strictly blocks GSI iframes and turns screen white.
+      // We safely bypass GSI on Android APK.
+      return;
+    }
 
+    let timeoutId;
     function initGoogle() {
       if (typeof window !== "undefined" && window.google?.accounts?.id) {
         try {
@@ -51,14 +99,15 @@ export default function LoginModal() {
               logo_alignment: "left",
               width: 320,
             });
+            setGsiReady(true);
           }
         } catch (err) {
           console.warn("Google Sign-In init error:", err);
+          setGsiReady(false);
         }
       }
     }
 
-    // Try immediately or retry if GSI script is still loading
     initGoogle();
     const interval = setInterval(() => {
       if (window.google?.accounts?.id && googleBtnRef.current?.children.length === 0) {
@@ -67,7 +116,14 @@ export default function LoginModal() {
       }
     }, 400);
 
-    return () => clearInterval(interval);
+    timeoutId = setTimeout(() => {
+      clearInterval(interval);
+    }, 3000);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeoutId);
+    };
   }, [isLoginModalOpen]);
 
   const handleGoogleCredentialResponse = async (response) => {
@@ -97,48 +153,48 @@ export default function LoginModal() {
     }
   };
 
-  const handleManualGooglePopup = () => {
-    if (typeof window !== "undefined" && window.google?.accounts?.id) {
-      window.google.accounts.id.prompt((notification) => {
-        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          // If One Tap is skipped or blocked by browser popup setting, open custom input
-          setIsCustomMode(true);
-        }
-      });
-    } else {
-      setIsCustomMode(true);
-    }
-  };
-
   if (!isLoginModalOpen) return null;
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!inputEmail.trim()) {
+    const raw = inputEmail.trim();
+    if (!raw) {
       setErrorMsg("Harap masukkan alamat Gmail kamu");
       return;
     }
 
-    let email = inputEmail.trim().toLowerCase();
+    let email = raw.toLowerCase();
     if (!email.includes("@")) {
       email = `${email}@gmail.com`;
     }
 
+    if (!email.endsWith("@gmail.com") && !email.includes(".")) {
+      email = `${email}@gmail.com`;
+    }
+
     loginWithGoogle(email, inputName);
+    showToast(`Berhasil masuk sebagai ${inputName || email}`, "purple");
     setInputEmail("");
     setInputName("");
     setErrorMsg("");
+    setIsLoginModalOpen(false);
+    setIsCustomMode(false);
   };
 
   const handleQuickSelect = (account) => {
     loginWithGoogle(account.email, account.name, account.avatar);
+    showToast(`Berhasil masuk sebagai ${account.name || account.email}`, "purple");
+    setIsLoginModalOpen(false);
   };
 
+  const hasSavedAccounts = savedAccounts && savedAccounts.length > 0;
+  const showSavedAccountsView = !isCustomMode && hasSavedAccounts;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fadeIn select-none">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn select-none">
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-md bg-[#130b26] border border-purple-500/25 rounded-2xl shadow-2xl p-6 sm:p-7 overflow-hidden animate-scaleUp"
+        className="relative w-full max-w-md bg-[#130b26] border border-purple-500/25 rounded-2xl shadow-2xl p-6 sm:p-7 overflow-hidden animate-scaleUp max-h-[90vh] overflow-y-auto"
       >
         {/* Ambient Top Glow */}
         <div className="absolute top-0 right-1/2 translate-x-1/2 w-48 h-32 bg-purple-600/20 rounded-full blur-3xl pointer-events-none -mt-10" />
@@ -157,25 +213,8 @@ export default function LoginModal() {
 
         {/* Header */}
         <div className="flex flex-col items-center text-center space-y-3 mb-6">
-          <div className="w-14 h-14 rounded-2xl bg-[#1b1035] border border-purple-500/30 flex items-center justify-center shadow-lg p-2.5">
-            <svg className="w-full h-full" viewBox="0 0 24 24">
-              <path
-                fill="#4285F4"
-                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-              />
-              <path
-                fill="#34A853"
-                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-              />
-              <path
-                fill="#FBBC05"
-                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-              />
-              <path
-                fill="#EA4335"
-                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-              />
-            </svg>
+          <div className="w-14 h-14 rounded-2xl bg-[#1b1035] border border-purple-500/30 flex items-center justify-center shadow-lg p-3">
+            <GoogleIcon className="w-full h-full" />
           </div>
 
           <div>
@@ -183,33 +222,35 @@ export default function LoginModal() {
               Masuk dengan Akun Google
             </h2>
             <p className="text-xs text-purple-200/70 mt-1 max-w-xs">
-              Playlist, lagu favorit, dan preferensi musikmu akan otomatis tersimpan di akun Gmail ini.
+              Playlist, lagu favorit, dan preferensi musikmu akan otomatis tersimpan di akun Google ini.
             </p>
           </div>
         </div>
 
-        {/* Official Google Sign-In Button */}
-        <div className="flex flex-col items-center justify-center mb-4">
-          <div ref={googleBtnRef} className="min-h-[44px] flex items-center justify-center w-full" />
-          {isGoogleLoading && (
-            <div className="flex items-center gap-2 text-xs text-purple-300 mt-2">
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              <span>Memverifikasi akun Google...</span>
-            </div>
-          )}
-        </div>
+        {/* 1. Official Google Identity Button (Desktop Browser Only) */}
+        {!isNativeEnvironment && (
+          <div className="flex flex-col items-center justify-center mb-4">
+            <div ref={googleBtnRef} className="min-h-[44px] flex items-center justify-center w-full" />
+            {isGoogleLoading && (
+              <div className="flex items-center gap-2 text-xs text-purple-300 mt-2">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>Memverifikasi akun Google...</span>
+              </div>
+            )}
+            {gsiReady && (
+              <div className="flex items-center gap-3 my-3 w-full">
+                <div className="flex-1 h-px bg-white/10" />
+                <span className="text-[10px] text-purple-300/60 uppercase font-bold tracking-wider">
+                  atau
+                </span>
+                <div className="flex-1 h-px bg-white/10" />
+              </div>
+            )}
+          </div>
+        )}
 
-        {/* Divider */}
-        <div className="flex items-center gap-3 my-3">
-          <div className="flex-1 h-px bg-white/10" />
-          <span className="text-[10px] text-purple-300/60 uppercase font-bold tracking-wider">
-            atau pilih akun
-          </span>
-          <div className="flex-1 h-px bg-white/10" />
-        </div>
-
-        {/* Saved Accounts List */}
-        {!isCustomMode && savedAccounts && savedAccounts.length > 0 && (
+        {/* 2. Saved Accounts List (One-Tap Fast Login) */}
+        {showSavedAccountsView && (
           <div className="space-y-3 mb-5">
             <span className="text-[11px] font-bold text-[#8d83a7] uppercase tracking-wider block">
               Pilih Akun Tersimpan
@@ -218,7 +259,6 @@ export default function LoginModal() {
             <div className="space-y-2">
               {savedAccounts.map((acc) => {
                 const isCurrent = currentUser?.email?.toLowerCase() === acc.email?.toLowerCase();
-                const initial = (acc.name || acc.email || "U").charAt(0).toUpperCase();
 
                 return (
                   <div
@@ -255,24 +295,27 @@ export default function LoginModal() {
             </div>
 
             <button
+              type="button"
               onClick={() => setIsCustomMode(true)}
               className="w-full py-2.5 mt-2 rounded-xl border border-dashed border-purple-500/30 hover:border-purple-500/60 hover:bg-purple-950/20 text-xs font-bold text-purple-300 flex items-center justify-center gap-2 transition-all cursor-pointer"
             >
               <UserPlus className="w-4 h-4" />
-              <span>Gunakan Akun Gmail Lain</span>
+              <span>Gunakan Akun Google Lain</span>
             </button>
           </div>
         )}
 
-        {/* Custom Input Form (Brand new account) */}
-        {(isCustomMode || !savedAccounts || savedAccounts.length === 0) && (
+        {/* 3. Direct Gmail Account Login Form (100% Reliable on Android APK & Web) */}
+        {(!showSavedAccountsView) && (
           <form onSubmit={handleSubmit} className="space-y-4 mb-4">
             <div>
               <label className="text-[11px] font-bold text-purple-200/80 mb-1.5 block">
-                Alamat Gmail
+                Alamat Akun Google (Gmail)
               </label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-[#8a80a4] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 flex items-center">
+                  <GoogleIcon className="w-4 h-4 opacity-80" />
+                </div>
                 <input
                   type="text"
                   value={inputEmail}
@@ -285,11 +328,14 @@ export default function LoginModal() {
                   autoFocus
                 />
               </div>
+              <p className="text-[10px] text-purple-300/60 mt-1">
+                Ketik nama pengguna atau alamat lengkap @gmail.com
+              </p>
             </div>
 
             <div>
               <label className="text-[11px] font-bold text-purple-200/80 mb-1.5 block">
-                Nama Tampilan (Opsional)
+                Nama Pengguna (Opsional)
               </label>
               <input
                 type="text"
@@ -306,13 +352,13 @@ export default function LoginModal() {
 
             <button
               type="submit"
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-sm shadow-lg shadow-purple-950/50 active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-sm shadow-lg shadow-purple-950/50 active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span>Masuk Sekarang</span>
-              <ArrowRight className="w-4 h-4" />
+              <GoogleIcon className="w-4 h-4" />
+              <span>Masuk dengan Akun Google</span>
             </button>
 
-            {savedAccounts && savedAccounts.length > 0 && (
+            {hasSavedAccounts && (
               <button
                 type="button"
                 onClick={() => {
@@ -330,7 +376,7 @@ export default function LoginModal() {
         {/* Footer Guarantee */}
         <div className="pt-3 border-t border-purple-500/15 flex items-center justify-center gap-2 text-[11px] text-[#8e84a8]">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-          <span>Data musikmu aman dan terisolasi khusus untuk akun Gmail kamu</span>
+          <span>Data playlist & lagu favorit aman tersimpan di akun Google kamu</span>
         </div>
       </div>
     </div>

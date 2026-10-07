@@ -7,16 +7,17 @@ const config: CapacitorConfig = {
   server: {
     url: 'https://bamsplay.vercel.app',
     cleartext: true,
+    allowNavigation: ['bamsplay.vercel.app'],
   },
   android: {
     backgroundColor: '#0b0813',
     allowMixedContent: true,
     captureInput: true,
-    webContentsDebuggingEnabled: false, // set true for debugging
+    webContentsDebuggingEnabled: false,
   },
   plugins: {
     SplashScreen: {
-      launchShowDuration: 2000,
+      launchShowDuration: 1200,
       launchAutoHide: true,
       backgroundColor: '#0b0813',
       androidSplashResourceName: 'splash',
