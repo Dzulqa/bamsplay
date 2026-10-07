@@ -27,13 +27,24 @@ public class MainActivity extends BridgeActivity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             try {
                 PictureInPictureParams.Builder builder = new PictureInPictureParams.Builder()
-                    .setAspectRatio(new Rational(16, 9));
+                    .setAspectRatio(new Rational(1, 1));
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     builder.setAutoEnterEnabled(true);
                 }
                 enterPictureInPictureMode(builder.build());
             } catch (Exception ignored) {}
         }
+    }
+
+    @Override
+    public void onPictureInPictureModeChanged(boolean isInPictureInPictureMode, android.content.res.Configuration newConfig) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig);
+        try {
+            if (getBridge() != null && getBridge().getWebView() != null) {
+                WebView webView = getBridge().getWebView();
+                webView.evaluateJavascript("if (window.__setPiPMode) { window.__setPiPMode(" + isInPictureInPictureMode + "); }", null);
+            }
+        } catch (Exception ignored) {}
     }
 
     @Override

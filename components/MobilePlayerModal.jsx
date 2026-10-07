@@ -23,9 +23,6 @@ import {
   ArrowUp,
   ArrowDown,
   X,
-  Download,
-  Loader2,
-  CheckCircle2,
 } from "lucide-react";
 
 export default function MobilePlayerModal() {
@@ -55,13 +52,7 @@ export default function MobilePlayerModal() {
     setVolume,
     isMuted,
     toggleMute,
-    downloadSong,
-    downloadedSongIds,
-    downloadingMap,
   } = useAudio();
-
-  const isDownloaded = currentSong ? (downloadedSongIds || []).includes(currentSong.id) : false;
-  const isDownloading = currentSong ? Boolean(downloadingMap?.[currentSong.id]) : false;
 
   const [showLyricsCard, setShowLyricsCard] = useState(false);
   const activeLineRef = useRef(null);
@@ -367,33 +358,6 @@ export default function MobilePlayerModal() {
 
         <div className="flex items-center gap-1">
           <button
-            onClick={() => downloadSong(currentSong)}
-            disabled={isDownloading}
-            className={`p-2 transition-transform active:scale-125 focus:outline-none ${
-              isDownloaded
-                ? "text-purple-400"
-                : isDownloading
-                ? "text-purple-300 animate-spin"
-                : "text-[#9f96bd] hover:text-white"
-            }`}
-            title={
-              isDownloaded
-                ? "Lagu tersimpan offline"
-                : isDownloading
-                ? "Sedang mengunduh..."
-                : "Unduh lagu untuk diputar offline"
-            }
-          >
-            {isDownloading ? (
-              <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
-            ) : isDownloaded ? (
-              <CheckCircle2 className="w-6 h-6 text-purple-400 fill-purple-500/20" />
-            ) : (
-              <Download className="w-6 h-6" />
-            )}
-          </button>
-
-          <button
             onClick={() => openAddToPlaylistModal(currentSong)}
             className="p-2 text-[#9f96bd] hover:text-purple-300 transition-colors"
             title="Tambahkan ke Playlist"
@@ -534,16 +498,8 @@ export default function MobilePlayerModal() {
         </span>
       </div>
 
-      {/* Bottom Sub-Actions: Device, Lyrics, Queue */}
-      <div className="flex items-center justify-between pt-2 border-t border-[#231742] text-[#978eb3]">
-        <button
-          onClick={() => setIsDeviceModalOpen(true)}
-          className="flex items-center gap-1.5 text-xs hover:text-white"
-        >
-          <Laptop2 className="w-4 h-4 text-purple-400" />
-          <span>Bamsplay Connect</span>
-        </button>
-
+      {/* Bottom Sub-Actions: Lyrics, Queue */}
+      <div className="flex items-center justify-end pt-2 border-t border-[#231742] text-[#978eb3]">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setShowLyricsCard(!showLyricsCard)}
