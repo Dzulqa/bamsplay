@@ -1,6 +1,9 @@
 package com.bamsplay.app;
 
+import android.app.PictureInPictureParams;
+import android.os.Build;
 import android.os.Bundle;
+import android.util.Rational;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import com.getcapacitor.BridgeActivity;
@@ -16,6 +19,21 @@ public class MainActivity extends BridgeActivity {
                 webSettings.setMediaPlaybackRequiresUserGesture(false);
             }
         } catch (Exception ignored) {}
+    }
+
+    @Override
+    public void onUserLeaveHint() {
+        super.onUserLeaveHint();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            try {
+                PictureInPictureParams.Builder builder = new PictureInPictureParams.Builder()
+                    .setAspectRatio(new Rational(16, 9));
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    builder.setAutoEnterEnabled(true);
+                }
+                enterPictureInPictureMode(builder.build());
+            } catch (Exception ignored) {}
+        }
     }
 
     @Override
