@@ -21,6 +21,9 @@ import {
   Minimize2,
   Sliders,
   Sparkles,
+  Download,
+  Loader2,
+  CheckCircle2,
 } from "lucide-react";
 
 export default function PlayerBar() {
@@ -58,11 +61,17 @@ export default function PlayerBar() {
     historyIndex,
     showToast,
     openAddToPlaylistModal,
+    downloadSong,
+    downloadedSongIds,
+    downloadingMap,
   } = useAudio();
 
   const [isHoveringProgress, setIsHoveringProgress] = useState(false);
   const [hoverSeekTime, setHoverSeekTime] = useState(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const isDownloaded = currentSong ? (downloadedSongIds || []).includes(currentSong.id) : false;
+  const isDownloading = currentSong ? Boolean(downloadingMap?.[currentSong.id]) : false;
 
   if (!currentSong) return null;
 
@@ -235,6 +244,33 @@ export default function PlayerBar() {
                   isLiked ? "fill-purple-500 text-purple-500" : "hover:text-purple-300"
                 }`}
               />
+            </button>
+
+            <button
+              onClick={() => downloadSong(currentSong)}
+              disabled={isDownloading}
+              className={`p-1.5 transition-colors focus:outline-none ${
+                isDownloaded
+                  ? "text-purple-400"
+                  : isDownloading
+                  ? "text-purple-300 animate-spin"
+                  : "text-[#9d94b8] hover:text-purple-300"
+              }`}
+              title={
+                isDownloaded
+                  ? "Lagu tersimpan offline"
+                  : isDownloading
+                  ? "Sedang mengunduh..."
+                  : "Unduh lagu untuk diputar offline"
+              }
+            >
+              {isDownloading ? (
+                <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
+              ) : isDownloaded ? (
+                <CheckCircle2 className="w-4 h-4 text-purple-400 fill-purple-500/20" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
             </button>
 
             <button
