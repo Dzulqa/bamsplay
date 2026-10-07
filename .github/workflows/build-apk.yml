@@ -12,6 +12,9 @@ on:
       - '.github/workflows/build-apk.yml'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-apk:
     name: Build Android APK
@@ -66,6 +69,17 @@ jobs:
         with:
           name: Gradle-Build-Log
           path: gradle_build.log
+
+      - name: Commit and Push Build Log on Failure
+        if: failure()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -B build-log-branch
+          cp gradle_build.log build-error.txt || echo "No log found" > build-error.txt
+          git add build-error.txt
+          git commit -m "chore: save gradle build error log" || true
+          git push -f origin build-log-branch || true
 
       - name: Prepare APK Output
         run: |
