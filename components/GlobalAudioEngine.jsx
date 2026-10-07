@@ -73,9 +73,10 @@ export default function GlobalAudioEngine() {
     volumeRef.current = volume;
   }, [isMuted, volume]);
 
-  // Android Background Audio Keep-Alive: An inaudible looping audio tag tells Android OS to never freeze playback when app is minimized
+  // Android Background Audio & Visibility Lifecycle Handler
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || typeof document === "undefined") return;
+
     try {
       const a = new Audio();
       // 1-sec silent WAV base64
@@ -85,7 +86,33 @@ export default function GlobalAudioEngine() {
       silentAudioRef.current = a;
     } catch (_) {}
 
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        // When returning to app, seamlessly resume if user had playback active
+        if (isPlayingRef.current && playerRef.current && typeof playerRef.current.playVideo === "function") {
+          try {
+            playerRef.current.playVideo();
+            startTimeSync();
+          } catch (_) {}
+        }
+      } else if (document.visibilityState === "hidden") {
+        // When app is minimized, attempt to keep YouTube stream alive
+        if (isPlayingRef.current && playerRef.current && typeof playerRef.current.playVideo === "function") {
+          setTimeout(() => {
+            if (isPlayingRef.current && playerRef.current?.playVideo) {
+              try {
+                playerRef.current.playVideo();
+              } catch (_) {}
+            }
+          }, 150);
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       if (silentAudioRef.current) {
         try {
           silentAudioRef.current.pause();
@@ -300,6 +327,16 @@ export default function GlobalAudioEngine() {
               startTimeSync();
             } else if (event.data === window.YT.PlayerState.PAUSED) {
               stopTimeSync();
+              // If paused while marked playing and document is hidden, attempt to resume stream in background
+              if (isPlayingRef.current && typeof document !== "undefined" && document.visibilityState === "hidden") {
+                setTimeout(() => {
+                  if (isPlayingRef.current && playerRef.current && typeof playerRef.current.playVideo === "function") {
+                    try {
+                      playerRef.current.playVideo();
+                    } catch (_) {}
+                  }
+                }, 200);
+              }
             } else if (event.data === window.YT.PlayerState.ENDED) {
               stopTimeSync();
               handleTrackEnded();

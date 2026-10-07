@@ -1340,8 +1340,31 @@ export function AudioProvider({ children }) {
     } catch (_) {}
 
     const actionHandlers = [
-      ["play", () => togglePlay()],
-      ["pause", () => togglePlay()],
+      [
+        "play",
+        () => {
+          if (!isPlayingRef.current) {
+            togglePlay();
+          } else {
+            if (playerEngineRef.current && typeof playerEngineRef.current.play === "function") {
+              try {
+                playerEngineRef.current.play();
+              } catch (_) {}
+            }
+            if (audioRef.current && audioRef.current.paused && audioRef.current.src) {
+              audioRef.current.play().catch(() => {});
+            }
+          }
+        },
+      ],
+      [
+        "pause",
+        () => {
+          if (isPlayingRef.current) {
+            togglePlay();
+          }
+        },
+      ],
       ["previoustrack", () => prevTrack()],
       ["nexttrack", () => nextTrack()],
       [
