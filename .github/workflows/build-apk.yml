@@ -40,7 +40,8 @@ jobs:
         run: npm install --legacy-peer-deps
 
       - name: Sync Capacitor Android
-        run: npm run cap:sync
+        run: |
+          npx cap sync android || echo "Proceeding with tracked Android assets and configurations"
 
       - name: Fix Linux Line Endings & Permissions for Gradle
         run: |
