@@ -52,6 +52,7 @@ export default function GlobalAudioEngine() {
   const currentSongRef = useRef(currentSong);
 
   const silentAudioRef = useRef(null);
+  const startTimeSyncRef = useRef(null);
 
   useEffect(() => {
     currentSongRef.current = currentSong;
@@ -59,6 +60,11 @@ export default function GlobalAudioEngine() {
 
   useEffect(() => {
     isPlayingRef.current = isPlaying;
+    if (typeof window !== "undefined" && window.AndroidBridge && typeof window.AndroidBridge.setPlaybackState === "function") {
+      try {
+        window.AndroidBridge.setPlaybackState(isPlaying);
+      } catch (_) {}
+    }
     if (silentAudioRef.current) {
       if (isPlaying) {
         silentAudioRef.current.play().catch(() => {});
@@ -92,7 +98,7 @@ export default function GlobalAudioEngine() {
         if (isPlayingRef.current && playerRef.current && typeof playerRef.current.playVideo === "function") {
           try {
             playerRef.current.playVideo();
-            startTimeSync();
+            if (startTimeSyncRef.current) startTimeSyncRef.current();
           } catch (_) {}
         }
       } else if (document.visibilityState === "hidden") {
@@ -229,6 +235,7 @@ export default function GlobalAudioEngine() {
 
   // Synchronize playback timeline smoothly (50ms = 20fps for ultra-responsive lyric sync)
   const startTimeSync = () => {
+    startTimeSyncRef.current = startTimeSync;
     clearInterval(timeSyncIntervalRef.current);
     timeSyncIntervalRef.current = setInterval(() => {
       if (playerRef.current && typeof playerRef.current.getCurrentTime === "function") {

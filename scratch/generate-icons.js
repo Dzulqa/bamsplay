@@ -77,7 +77,29 @@ async function generateIcons() {
   await sharp(svgBuffer, { density: 300 }).resize(32, 32).png().toFile(faviconPath);
   console.log(`  ✅ favicon.png (32x32)`);
 
-  console.log(`\n✨ All icons generated in /public/icons/`);
+  // Generate splash logo density assets
+  const logoSource = path.join(__dirname, "../public/bamsplay-logo-circle.png");
+  if (fs.existsSync(logoSource)) {
+    const splashDensities = [
+      { folder: "drawable-mdpi", size: 128 },
+      { folder: "drawable-hdpi", size: 192 },
+      { folder: "drawable-xhdpi", size: 256 },
+      { folder: "drawable-xxhdpi", size: 384 },
+      { folder: "drawable-xxxhdpi", size: 512 },
+      { folder: "drawable", size: 128 },
+    ];
+    for (const d of splashDensities) {
+      const outDir = path.join(__dirname, `../android/app/src/main/res/${d.folder}`);
+      if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
+      await sharp(logoSource)
+        .resize(d.size, d.size, { fit: "contain" })
+        .png()
+        .toFile(path.join(outDir, "splash_logo.png"));
+      console.log(`  ✅ splash_logo.png (${d.size}x${d.size}) -> ${d.folder}`);
+    }
+  }
+
+  console.log(`\n✨ All icons and splash assets generated!`);
   console.log(`   Total: ${SIZES.length + maskableSizes.length + 1} files`);
 }
 
